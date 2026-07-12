@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chat with The Newport Studio</title>
+<style>
+  :root {
+    --cream: #fdf9fb;
+    --ink: #1e1b17;
+    --bronze: #ec4899;
+    --bronze-dark: #db2777;
+    --whatsapp: #25d366;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .chat {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border: 1px solid rgba(30, 27, 23, 0.1);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(30, 27, 23, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: min(640px, 92svh);
+  }
+  .chat-head {
+    background: var(--ink);
+    color: #fff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .chat-head .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #4ade80; flex: none;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+  }
+  .chat-head h1 { font-size: 15px; font-weight: 600; }
+  .chat-head p { font-size: 12px; color: rgba(255,255,255,0.65); }
+  .log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    max-width: 82%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-line;
+    animation: pop 0.25s ease-out;
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .bot { background: #f1ede6; border-bottom-left-radius: 6px; align-self: flex-start; }
+  .user { background: var(--bronze); color: #fff; border-bottom-right-radius: 6px; align-self: flex-end; }
+  .quick {
+    display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start;
+  }
+  .quick button {
+    border: 1px solid var(--bronze);
+    color: var(--bronze-dark);
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .quick button:hover { background: var(--bronze); color: #fff; }
+  .inputbar {
+    display: flex; gap: 8px;
+    border-top: 1px solid rgba(30,27,23,0.1);
+    padding: 12px;
+  }
+  .inputbar input {
+    flex: 1;
+    border: 1px solid rgba(30,27,23,0.2);
+    border-radius: 999px;
+    padding: 11px 16px;
+    font-size: 14px;
+    outline: none;
+  }
+  .inputbar input:focus { border-color: var(--bronze); }
+  .inputbar button {
+    border: none;
+    background: var(--bronze);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .inputbar button:disabled { opacity: 0.4; cursor: default; }
+  .wa-link {
+    display: inline-block;
+    background: var(--whatsapp);
+    color: #fff !important;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 999px;
+    padding: 9px 16px;
+    margin-top: 6px;
+  }
+  .error { color: #b91c1c; font-size: 12px; padding: 0 18px 8px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="chat" role="region" aria-label="Booking enquiry chat">
+  <div class="chat-head">
+    <span class="dot" aria-hidden="true"></span>
+    <div>
+      <h1>The Newport Studio</h1>
+      <p>Typically replies within a few hours</p>
+    </div>
+  </div>
+  <div class="log" id="log" aria-live="polite"></div>
+  <p class="error" id="error"></p>
+  <form class="inputbar" id="form" autocomplete="off">
+    <input id="input" type="text" placeholder="Type your reply…" maxlength="120" aria-label="Your reply" />
+    <button id="send" type="submit">Send</button>
+  </form>
+</div>
+
+<script>
+"use strict";
+(function () {
+  var WHATSAPP_URL =
+    "https://wa.me/447472469217?text=Hi%2C%20I%27m%20interested%20in%20booking%20The%20Newport%20Studio";
+
+  var log = document.getElementById("log");
+  var form = document.getElementById("form");
+  var input = document.getElementById("input");
+  var send = document.getElementById("send");
+  var errorEl = document.getElementById("error");
+
+  var lead = { name: "", email: "", stayDates: "" };
+  var step = "name"; // name -> email -> dates -> confirm -> done
+  var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
+
+  /* All rendering uses textContent — user input is never parsed as HTML. */
+  function addMsg(text, who) {
+    var div = document.createElement("div");
+    div.className = "msg " + who;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  function addBotDelayed(lines, then) {
+    var i = 0;
+    (function next() {
+      if (i >= lines.length) { if (then) then(); return; }
+      setTimeout(function () {
+        addMsg(lines[i], "bot");
+        i += 1;
+        next();
+      }, i === 0 ? 250 : 700);
+    })();
+  }
+
+  function addQuickReplies(options, onPick) {
+    var wrap = document.createElement("div");
+    wrap.className = "quick";
+    options.forEach(function (opt) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = opt;
+      b.addEventListener("click", function () {
+        wrap.remove();
+        onPick(opt);
+      });
+      wrap.appendChild(b);
+    });
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function showError(text) {
+    errorEl.textContent = text;
+    errorEl.style.display = text ? "block" : "none";
+  }
+
+  function sanitize(value) {
+    return value.replace(/\s+/g, " ").trim().slice(0, 120);
+  }
+
+  function askDates() {
+    step = "dates";
+    addBotDelayed(
+      ["Lovely, " + lead.name + "! Which dates would you like to stay?"],
+      function () {
+        addQuickReplies(
+          ["This weekend", "Next week", "Next month", "I'll type my dates"],
+          function (choice) {
+            if (choice === "I'll type my dates") {
+              addMsg(choice, "user");
+              addBotDelayed(["No problem — type your arrival and departure dates (e.g. 20–23 July)."]);
+              return;
+            }
+            handleDates(choice);
+          }
+        );
+      }
+    );
+  }
+
+  function handleDates(value) {
+    addMsg(value, "user");
+    lead.stayDates = value;
+    step = "confirm";
+    addBotDelayed(
+      [
+        "Perfect. Just to confirm:\nName: " + lead.name +
+        "\nEmail: " + lead.email +
+        "\nDates: " + lead.stayDates,
+        "Shall I send this to the host?",
+      ],
+      function () {
+        addQuickReplies(["Yes, send it", "Start again"], function (choice) {
+          addMsg(choice, "user");
+          if (choice === "Start again") {
+            lead = { name: "", email: "", stayDates: "" };
+            step = "name";
+            addBotDelayed(["No problem — let's start over. What's your name?"]);
+            return;
+          }
+          submitLead();
+        });
+      }
+    );
+  }
+
+  function submitLead() {
+    step = "done";
+    var pending = addMsg("Sending…", "bot");
+    fetch("/api/lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (r) {
+        pending.remove();
+        if (!r.ok)
+          throw new Error((r.data && r.data.error) || "Something went wrong");
+        addBotDelayed(
+          [
+            "All sent! " + lead.name + ", the host will get back to you at " + lead.email + " shortly.",
+            "Prefer to chat right now? Message us on WhatsApp:",
+          ],
+          function () {
+            var wrap = document.createElement("div");
+            wrap.className = "msg bot";
+            var a = document.createElement("a");
+            a.className = "wa-link";
+            a.href = WHATSAPP_URL;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = "WhatsApp Chat";
+            wrap.appendChild(a);
+            log.appendChild(wrap);
+            log.scrollTop = log.scrollHeight;
+          }
+        );
+      })
+      .catch(function (err) {
+        pending.remove();
+        step = "confirm";
+        addBotDelayed([
+          (err && err.message ? err.message : "Something went wrong") +
+            " — please try again.",
+        ], function () {
+          addQuickReplies(["Yes, send it"], function () {
+            addMsg("Yes, send it", "user");
+            submitLead();
+          });
+        });
+      });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    showError("");
+    var value = sanitize(input.value);
+    if (!value || step === "done" || step === "confirm") return;
+
+    if (step === "name") {
+      if (value.length < 2) { showError("Please enter your name (at least 2 characters)."); return; }
+      addMsg(value, "user");
+      lead.name = value;
+      input.value = "";
+      step = "email";
+      addBotDelayed(["Nice to meet you, " + value + "! What's the best email to reach you on?"]);
+      return;
+    }
+
+    if (step === "email") {
+      if (!EMAIL_RE.test(value)) { showError("That doesn't look like a valid email — please check and try again."); return; }
+      addMsg(value, "user");
+      lead.email = value;
+      input.value = "";
+      askDates();
+      return;
+    }
+
+    if (step === "dates") {
+      if (value.length < 3) { showError("Please tell us your dates."); return; }
+      input.value = "";
+      handleDates(value);
+    }
+  });
+
+  /* Opening sequence: greeting + 2-sentence property/area intro. */
+  addBotDelayed([
+    "Hi there! 👋 Welcome to The Newport Studio.",
+    "We're a private, self-contained studio apartment in Newport, South Wales — sleeps 2, with its own entrance, free Wi-Fi and free parking from £100/night. You're about a mile from the city centre and minutes from the M4, Celtic Manor and Newport station.",
+    "I can pass your details straight to the host. What's your name?",
+  ]);
+})();
+</script>
+</body>
+</html>

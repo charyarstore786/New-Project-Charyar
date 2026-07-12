@@ -1,0 +1,110 @@
+// Data model for the direct-booking engine (see PLAN.md).
+// SQLite locally; DATABASE_URL is switchable to Postgres for production.
+// SQLite has no enums, so status fields are strings — allowed values are
+// documented next to each field and enforced in lib/booking.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Guest {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String
+  phone              String
+  country            String?
+  // UNVERIFIED | PENDING | VERIFIED | FAILED
+  verificationStatus String    @default("UNVERIFIED")
+  // Minimal summary extracted from the ID check (JSON: docType, docNumber
+  // masked, dob, expiry). Document images stay in Stripe Identity, never here.
+  idSummary          String?
+  createdAt          DateTime  @default(now())
+  bookings           Booking[]
+}
+
+model Booking {
+  id                    String        @id @default(cuid())
+  // Human-friendly reference shown to the guest, e.g. NS-4F7K2M
+  reference             String        @unique
+  // Date-only values stored at midnight UTC; checkOut is exclusive
+  checkIn               DateTime
+  checkOut              DateTime
+  guests                Int
+  // Money in pence
+  nightlyRate           Int
+  nights                Int
+  cleaningFee           Int
+  total                 Int
+  // PENDING_VERIFICATION | PENDING_APPROVAL | APPROVED | CHECKED_IN |
+  // CHECKED_OUT | CLOSED | REJECTED | CANCELLED
+  status                String        @default("PENDING_VERIFICATION")
+  guestId               String
+  guest                 Guest         @relation(fields: [guestId], references: [id])
+  stripeCustomerId      String?
+  stripePaymentIntentId String?
+  stripeSetupIntentId   String?
+  stripeDepositIntentId String?
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  damageClaims          DamageClaim[]
+  emails                EmailLog[]
+
+  @@index([checkIn, checkOut])
+  @@index([status])
+}
+
+// External bookings/blocks imported from the Sympl iCal feed
+model CalendarBlock {
+  id       String   @id @default(cuid())
+  // iCal UID — upsert key so re-imports stay idempotent
+  uid      String   @unique
+  start    DateTime
+  end      DateTime
+  summary  String?
+  source   String   @default("sympl")
+  syncedAt DateTime @default(now())
+
+  @@index([start, end])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  // CONFIRMATION | CHECK_IN_INSTRUCTIONS | CHECK_OUT_INSTRUCTIONS |
+  // REJECTED | DEPOSIT_FAILED | ...
+  type      String
+  to        String
+  subject   String
+  body      String
+  sentAt    DateTime @default(now())
+
+  // Idempotency guard for cron-triggered emails
+  @@unique([bookingId, type])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  type      String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+model DamageClaim {
+  id             String   @id @default(cuid())
+  bookingId      String
+  booking        Booking  @relation(fields: [bookingId], references: [id])
+  amount         Int
+  note           String
+  stripeChargeId String?
+  createdAt      DateTime @default(now())
+}

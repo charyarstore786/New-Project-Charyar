@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+@theme {
+  --color-cream: #fdf9fb;
+  --color-ink: #1e1b17;
+  --color-accent: #ec4899;
+  --color-accent-dark: #db2777;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: #ec489933;
+}
+
+/* Gradient title text — pink / red / blue */
+.title-pink,
+.title-red,
+.title-blue {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.title-pink {
+  background-image: linear-gradient(105deg, #f472b6, #ec4899 55%, #db2777);
+}
+.title-red {
+  background-image: linear-gradient(105deg, #f87171, #ef4444 55%, #dc2626);
+}
+.title-blue {
+  background-image: linear-gradient(105deg, #60a5fa, #3b82f6 55%, #2563eb);
+}
+.title-tricolor {
+  background-image: linear-gradient(100deg, #f472b6, #ec4899 30%, #ef4444 55%, #3b82f6 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Fancy red & blue variants */
+.btn-red,
+.btn-blue {
+  position: relative;
+  display: inline-block;
+  border-radius: 9999px;
+  color: #fff;
+  font-weight: 600;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+.btn-red {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 45%, #dc2626 100%);
+  box-shadow:
+    0 4px 14px rgba(239, 68, 68, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn-blue {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 45%, #2563eb 100%);
+  box-shadow:
+    0 4px 14px rgba(59, 130, 246, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn-red:hover,
+.btn-blue:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+.btn-red:active,
+.btn-blue:active {
+  transform: translateY(0);
+}
+
+/* Fancy pink CTA button */
+.btn-fancy {
+  position: relative;
+  display: inline-block;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #f472b6 0%, #ec4899 45%, #db2777 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow:
+    0 4px 14px rgba(236, 72, 153, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.btn-fancy:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 8px 24px rgba(236, 72, 153, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.btn-fancy:active {
+  transform: translateY(0);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s ease-out both;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
