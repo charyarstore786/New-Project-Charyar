@@ -5,7 +5,7 @@ export const site = {
   email: "rental2dayltd@gmail.com",
   phone: "07472 469217",
   whatsappHref:
-    "https://wa.me/447472469217?text=Hi%2C%20I%27m%20interested%20in%20booking%20The%20Newport%20Studio",
+    "https://wa.me/447472469217?text=Hi%2C%20I%27m%20interested%20in%20booking%20Short%20Stay%20Newport",
   nightlyRate: 100,
   cleaningFee: 0,
   deposit: 200,
