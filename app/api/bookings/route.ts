@@ -4,7 +4,7 @@ import { clientIp, rateLimited } from "@/lib/rate-limit";
 import { crossOrigin } from "@/lib/security";
 
 const MAX_BODY_BYTES = 10 * 1024;
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
+const EMAIL_RE = /^[^\s@]{1,64}@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
 const PHONE_RE = /^\+?[\d\s().-]{7,20}$/;
 
 /** Strip control characters and collapse whitespace. */

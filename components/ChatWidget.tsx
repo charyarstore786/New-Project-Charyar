@@ -14,7 +14,7 @@ const QUICK_PICK_KIND: Record<QuickPick, "weekend" | "nextweek" | "nextmonth"> =
   "Next month": "nextmonth",
 };
 
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
+const EMAIL_RE = /^[^\s@]{1,64}@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
 
 const GREETING: Msg[] = [
   { who: "bot", text: "Hi there! 👋 Welcome to Short Stay Newport." },

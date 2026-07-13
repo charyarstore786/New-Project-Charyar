@@ -17,7 +17,7 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 // Keep only the newest leads so the file can't grow without bound
 const MAX_STORED_LEADS = 2000;
 
-const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
+const EMAIL_RE = /^[^\s@]{1,64}@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
 
 /** Strip control characters (below 32, plus DEL) and collapse whitespace. */
 function clean(value: unknown, maxLen: number): string | null {
