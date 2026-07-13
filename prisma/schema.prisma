@@ -1,6 +1,7 @@
 // Data model for the direct-booking engine (see PLAN.md).
-// SQLite locally; DATABASE_URL is switchable to Postgres for production.
-// SQLite has no enums, so status fields are strings — allowed values are
+// Postgres (Neon) in production and local dev alike, via DATABASE_URL.
+// Status fields are kept as plain strings (not native enums) since this
+// schema started on SQLite, which has no enum support — allowed values are
 // documented next to each field and enforced in lib/booking.
 
 generator client {
@@ -8,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
