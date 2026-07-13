@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Calendar from "./Calendar";
+import StripePaymentForm from "./StripePaymentForm";
 import { formatGbp, type Quote } from "@/lib/booking/quote";
+import { getBrowserStripe, stripeConfigured } from "@/lib/stripe/browserClient";
 import { site } from "@/lib/site";
 
 type Availability = {
@@ -42,6 +44,11 @@ export default function BookingWizard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
+
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
+  const [setupClientSecret, setSetupClientSecret] = useState<string | null>(null);
+  const [setupIntentId, setSetupIntentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/availability")
@@ -95,16 +102,140 @@ export default function BookingWizard() {
     setStep("verify");
   }
 
-  async function runMockVerification() {
-    setBusy(true);
-    setError("");
-    // Demo mode: simulates the Stripe Identity document check
-    await new Promise((r) => setTimeout(r, 1200));
-    setVerified(true);
-    setBusy(false);
+  async function ensureCustomer(): Promise<string> {
+    if (customerId) return customerId;
+    const res = await fetch("/api/stripe/customer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: details.name.trim(), email: details.email.trim() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Could not start verification.");
+    setCustomerId(data.customerId);
+    return data.customerId as string;
   }
 
-  async function payAndBook() {
+  async function runVerification() {
+    setBusy(true);
+    setError("");
+    try {
+      const cid = await ensureCustomer();
+
+      const sessRes = await fetch("/api/stripe/identity-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: cid, email: details.email.trim() }),
+      });
+      const sessData = await sessRes.json().catch(() => ({}));
+      if (!sessRes.ok) throw new Error(sessData.error || "Could not start ID verification.");
+      setVerificationSessionId(sessData.sessionId);
+
+      if (stripeConfigured) {
+        const stripe = await getBrowserStripe();
+        if (!stripe) throw new Error("Payment system failed to load — please refresh and try again.");
+        const result = await stripe.verifyIdentity(sessData.clientSecret);
+        if (result.error) throw new Error(result.error.message || "Verification was cancelled.");
+
+        // The document check usually resolves within a second or two; poll briefly.
+        let status = "processing";
+        for (let i = 0; i < 6 && status === "processing"; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          const statusRes = await fetch(`/api/stripe/identity-session/${sessData.sessionId}`);
+          const statusData = await statusRes.json().catch(() => ({}));
+          status = statusData.status ?? "processing";
+        }
+        if (status !== "verified") {
+          throw new Error("We couldn't confirm your ID yet — this can take a minute. Please try again shortly.");
+        }
+      } else {
+        // No Stripe key configured — simulate the check so the flow stays testable.
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      setVerified(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Fetch the SetupIntent as soon as the payment step opens.
+  useEffect(() => {
+    if (step !== "pay" || setupClientSecret || busy) return;
+    (async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const cid = await ensureCustomer();
+        const res = await fetch("/api/stripe/setup-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customerId: cid }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not start payment setup.");
+        setSetupClientSecret(data.clientSecret);
+        setSetupIntentId(data.setupIntentId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+      } finally {
+        setBusy(false);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    })();
+  }, [step]);
+
+  async function finalizeBooking(paymentMethodId: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const piRes = await fetch("/api/stripe/payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId, paymentMethodId, checkIn, checkOut, guests, bookingReference: "pending" }),
+      });
+      const piData = await piRes.json().catch(() => ({}));
+      if (!piRes.ok) throw new Error(piData.error || "Payment could not be authorized.");
+
+      let paymentIntentId: string = piData.paymentIntentId;
+      if (piData.status === "requires_action") {
+        const stripe = await getBrowserStripe();
+        if (!stripe) throw new Error("Payment system failed to load — please refresh and try again.");
+        const confirmResult = await stripe.confirmCardPayment(piData.clientSecret);
+        if (confirmResult.error) throw new Error(confirmResult.error.message || "Card authentication failed.");
+        paymentIntentId = confirmResult.paymentIntent?.id ?? paymentIntentId;
+      }
+
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkIn,
+          checkOut,
+          guests,
+          guest: {
+            name: details.name.trim(),
+            email: details.email.trim(),
+            phone: details.phone.trim(),
+            country: details.country.trim() || undefined,
+          },
+          stripe: { customerId, setupIntentId, paymentIntentId, verificationSessionId },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Booking failed — you have not been charged.");
+      setReference(data.reference);
+      setStep("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Demo-mode fallback when no Stripe key is configured at all. */
+  async function payAndBookDemo() {
     setBusy(true);
     setError("");
     try {
@@ -120,6 +251,12 @@ export default function BookingWizard() {
             email: details.email.trim(),
             phone: details.phone.trim(),
             country: details.country.trim() || undefined,
+          },
+          stripe: {
+            customerId: customerId ?? "mock_customer",
+            setupIntentId: setupIntentId ?? "mock_seti",
+            paymentIntentId: "mock_pi_demo",
+            verificationSessionId: verificationSessionId ?? "mock_vs",
           },
         }),
       });
@@ -360,13 +497,15 @@ export default function BookingWizard() {
               partner, and it is never stored on our servers.
             </p>
 
-            <div className="mt-6 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-5 text-sm">
-              <p className="font-medium text-accent-dark">Demo mode</p>
-              <p className="mt-1 text-ink/70">
-                This preview site simulates the ID check. On the live site this
-                step opens the secure document scanner.
-              </p>
-            </div>
+            {!stripeConfigured && (
+              <div className="mt-6 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-5 text-sm">
+                <p className="font-medium text-accent-dark">Demo mode</p>
+                <p className="mt-1 text-ink/70">
+                  This preview site simulates the ID check. On the live site this
+                  step opens the secure document scanner.
+                </p>
+              </div>
+            )}
 
             {verified ? (
               <p className="mt-6 flex items-center gap-2 font-medium text-green-700">
@@ -375,11 +514,11 @@ export default function BookingWizard() {
               </p>
             ) : (
               <button
-                onClick={runMockVerification}
+                onClick={runVerification}
                 disabled={busy}
                 className="btn-fancy mt-6 px-6 py-3 disabled:opacity-40"
               >
-                {busy ? "Checking document…" : "Verify my ID (demo)"}
+                {busy ? "Checking document…" : stripeConfigured ? "Verify my ID" : "Verify my ID (demo)"}
               </button>
             )}
 
@@ -413,26 +552,47 @@ export default function BookingWizard() {
               confirmed, the authorization is released in full.
             </p>
 
-            <div className="mt-6 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-5 text-sm">
-              <p className="font-medium text-accent-dark">Demo mode</p>
-              <p className="mt-1 text-ink/70">
-                This preview site simulates the card payment. On the live site
-                this step shows the secure Stripe card form.
-              </p>
-            </div>
+            {stripeConfigured ? (
+              setupClientSecret ? (
+                <div className="mt-6">
+                  <StripePaymentForm
+                    clientSecret={setupClientSecret}
+                    onConfirmed={finalizeBooking}
+                    busyLabel="Authorizing…"
+                    submitLabel={`Authorize ${formatGbp(quote.total)} & request booking`}
+                  />
+                </div>
+              ) : (
+                <p className="mt-6 text-sm text-ink/50">Loading secure payment form…</p>
+              )
+            ) : (
+              <>
+                <div className="mt-6 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-5 text-sm">
+                  <p className="font-medium text-accent-dark">Demo mode</p>
+                  <p className="mt-1 text-ink/70">
+                    This preview site simulates the card payment. On the live site
+                    this step shows the secure Stripe card form.
+                  </p>
+                </div>
 
-            <div className="mt-6 grid max-w-sm gap-3 opacity-60">
-              <input
-                disabled
-                value="4242 4242 4242 4242"
-                aria-label="Card number (demo)"
-                className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <input disabled value="12 / 30" aria-label="Expiry (demo)" className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm" />
-                <input disabled value="123" aria-label="CVC (demo)" className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm" />
-              </div>
-            </div>
+                <div className="mt-6 grid max-w-sm gap-3 opacity-60">
+                  <input
+                    disabled
+                    value="4242 4242 4242 4242"
+                    aria-label="Card number (demo)"
+                    className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input disabled value="12 / 30" aria-label="Expiry (demo)" className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm" />
+                    <input disabled value="123" aria-label="CVC (demo)" className="rounded-xl border border-ink/20 px-4 py-2.5 text-sm" />
+                  </div>
+                </div>
+
+                <button onClick={payAndBookDemo} disabled={busy} className="btn-fancy mt-6 px-6 py-3 disabled:opacity-40">
+                  {busy ? "Authorizing…" : `Authorize ${formatGbp(quote.total)} & request booking`}
+                </button>
+              </>
+            )}
 
             <div className="mt-8 flex flex-wrap gap-3">
               <button
@@ -442,9 +602,6 @@ export default function BookingWizard() {
                 className="rounded-full border border-ink/20 px-6 py-3 font-medium transition-colors hover:bg-ink/5 disabled:opacity-40"
               >
                 Back
-              </button>
-              <button onClick={payAndBook} disabled={busy} className="btn-fancy px-6 py-3 disabled:opacity-40">
-                {busy ? "Authorizing…" : `Authorize ${formatGbp(quote.total)} & request booking`}
               </button>
             </div>
           </div>

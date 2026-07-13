@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
-import { getIdentityProvider } from "@/lib/stripe/identity";
-import { getPaymentProvider } from "@/lib/stripe/payments";
+import { getVerificationStatus, getVerificationSummary } from "@/lib/stripe/identity";
 import { isRangeAvailable, syncExternalBlocks } from "./availability";
 import { computeQuote, validateStay } from "./quote";
 
@@ -10,6 +9,15 @@ export type GuestDetails = {
   email: string;
   phone: string;
   country?: string;
+};
+
+/** IDs from the client-driven Stripe.js steps that ran before this call
+ * (see /api/stripe/customer, /identity-session, /setup-intent, /payment-intent). */
+export type StripeContext = {
+  customerId: string;
+  setupIntentId: string;
+  paymentIntentId: string;
+  verificationSessionId: string;
 };
 
 export type CreateBookingResult =
@@ -29,16 +37,19 @@ function newReference(): string {
 }
 
 /**
- * Full booking creation in mock mode: validate → verify ID → authorize
- * payment → transactionally re-check availability and persist. The booking
- * lands in PENDING_APPROVAL, which blocks its dates immediately (site
- * calendar + exported iCal feed) until the host approves or rejects.
+ * Finalizes a booking after the guest has already completed ID verification
+ * and card authorization client-side via Stripe.js (see BookingWizard.tsx).
+ * This re-checks availability and the verification result server-side, then
+ * transactionally persists the booking. Lands in PENDING_APPROVAL, which
+ * blocks its dates immediately (site calendar + exported iCal feed) until
+ * the host approves or rejects.
  */
 export async function createBooking(input: {
   checkIn: unknown;
   checkOut: unknown;
   guests: unknown;
   guest: GuestDetails;
+  stripe: StripeContext;
 }): Promise<CreateBookingResult> {
   const validated = validateStay(input);
   if (!validated.ok) return { ok: false, error: validated.error, code: "INVALID" };
@@ -54,35 +65,31 @@ export async function createBooking(input: {
     };
   }
 
-  const reference = newReference();
-
-  const verification = await getIdentityProvider().verifyGuest(input.guest);
-  if (verification.status === "FAILED") {
+  let verificationStatus: string;
+  try {
+    verificationStatus = await getVerificationStatus(input.stripe.verificationSessionId);
+  } catch (err) {
+    console.error("Could not check ID verification status:", err);
     return {
       ok: false,
-      error: "We couldn't verify your ID. Please try again or contact us.",
+      error: "We couldn't confirm your ID verification. Please try again.",
       code: "VERIFICATION_FAILED",
     };
   }
-
-  const quote = computeQuote(stay);
-
-  let payment;
-  try {
-    payment = await getPaymentProvider().setupBookingPayment({
-      totalPence: quote.total,
-      guestName: input.guest.name,
-      guestEmail: input.guest.email,
-      bookingReference: reference,
-    });
-  } catch (err) {
-    console.error("Payment setup failed:", err);
+  if (verificationStatus !== "verified") {
     return {
       ok: false,
-      error: "Payment could not be authorized. You have not been charged.",
-      code: "PAYMENT_FAILED",
+      error:
+        verificationStatus === "processing"
+          ? "Your ID is still being verified — please wait a moment and try again."
+          : "We couldn't verify your ID. Please try again or contact us.",
+      code: "VERIFICATION_FAILED",
     };
   }
+  const idSummary = await getVerificationSummary(input.stripe.verificationSessionId, input.guest.name);
+
+  const reference = newReference();
+  const quote = computeQuote(stay);
 
   try {
     const booking = await db.$transaction(async (tx) => {
@@ -96,8 +103,8 @@ export async function createBooking(input: {
           email: input.guest.email,
           phone: input.guest.phone,
           country: input.guest.country || null,
-          verificationStatus: verification.status,
-          idSummary: JSON.stringify(verification.summary),
+          verificationStatus: "VERIFIED",
+          idSummary: JSON.stringify(idSummary),
         },
       });
 
@@ -113,9 +120,9 @@ export async function createBooking(input: {
           total: quote.total,
           status: "PENDING_APPROVAL",
           guestId: guest.id,
-          stripeCustomerId: payment.customerId,
-          stripePaymentIntentId: payment.paymentIntentId,
-          stripeSetupIntentId: payment.setupIntentId,
+          stripeCustomerId: input.stripe.customerId,
+          stripePaymentIntentId: input.stripe.paymentIntentId,
+          stripeSetupIntentId: input.stripe.setupIntentId,
         },
       });
 
@@ -123,7 +130,7 @@ export async function createBooking(input: {
         data: {
           bookingId: created.id,
           type: "BOOKING_CREATED",
-          detail: `${quote.checkIn} → ${quote.checkOut}, ${stay.guests} guest(s), total ${quote.total}p, payment authorized (${payment.paymentIntentId})`,
+          detail: `${quote.checkIn} → ${quote.checkOut}, ${stay.guests} guest(s), total ${quote.total}p, payment authorized (${input.stripe.paymentIntentId})`,
         },
       });
 

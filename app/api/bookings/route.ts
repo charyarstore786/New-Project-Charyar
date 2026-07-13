@@ -58,11 +58,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid phone number." }, { status: 422 });
   }
 
+  const stripe = (body.stripe ?? {}) as Record<string, unknown>;
+  const customerId = clean(stripe.customerId, 120);
+  const setupIntentId = clean(stripe.setupIntentId, 120);
+  const paymentIntentId = clean(stripe.paymentIntentId, 120);
+  const verificationSessionId = clean(stripe.verificationSessionId, 120);
+  if (!customerId || !setupIntentId || !paymentIntentId || !verificationSessionId) {
+    return NextResponse.json({ error: "Missing payment/verification details." }, { status: 422 });
+  }
+
   const result = await createBooking({
     checkIn: body.checkIn,
     checkOut: body.checkOut,
     guests: body.guests,
     guest: { name, email, phone, country },
+    stripe: { customerId, setupIntentId, paymentIntentId, verificationSessionId },
   });
 
   if (!result.ok) {
