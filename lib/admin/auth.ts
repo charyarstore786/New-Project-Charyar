@@ -1,5 +1,5 @@
 import "server-only";
-import crypto from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 // Simple signed-cookie session for the single-user admin dashboard (see
 // PLAN.md "Admin dashboard"). No accounts, no NextAuth — one shared password
@@ -17,7 +17,7 @@ function secret(): string {
 }
 
 function sign(payload: string): string {
-  return crypto.createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", secret()).update(payload).digest("hex");
 }
 
 export function checkPassword(candidate: string): boolean {
@@ -25,7 +25,7 @@ export function checkPassword(candidate: string): boolean {
   const a = Buffer.from(candidate);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  return timingSafeEqual(a, b);
 }
 
 export function createSessionToken(): string {
@@ -45,6 +45,6 @@ export function verifySessionToken(token: string | undefined | null): boolean {
   }
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
   return Date.now() - Number(issuedAt) < SESSION_TTL_MS;
 }
