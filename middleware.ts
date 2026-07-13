@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ADMIN_COOKIE, verifySessionToken } from "@/lib/admin/auth";
 
-// Node.js runtime (not Edge) so the HMAC check in lib/admin/auth can use
-// the built-in `crypto` module.
-export const runtime = "nodejs";
-
 export const config = {
+  // Node.js runtime (not Edge) so the HMAC check in lib/admin/auth can use
+  // the built-in `crypto` module.
+  runtime: "nodejs",
   matcher: ["/admin/:path*", "/api/admin/:path*"],
 };
 
