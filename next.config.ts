@@ -32,13 +32,6 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
-  // Lets middleware.ts run on the Node.js runtime instead of Edge, since it
-  // needs the built-in `crypto` module for the admin session check. The
-  // flag works at runtime (Next.js prints it under "Experiments") but this
-  // version's shipped types don't declare it yet, hence the cast.
-  experimental: {
-    nodeMiddleware: true,
-  } as NextConfig["experimental"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ADMIN_COOKIE, verifySessionToken } from "@/lib/admin/auth";
 import LogoutButton from "./LogoutButton";
 
 const NAV = [
@@ -8,7 +11,10 @@ const NAV = [
   { href: "/admin/calendar", label: "Calendar", icon: "🗓️" },
 ];
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const token = (await cookies()).get(ADMIN_COOKIE)?.value;
+  if (!verifySessionToken(token)) redirect("/admin/login");
+
   return (
     <div className="min-h-screen bg-[#f6f5f3] text-ink">
       <div className="flex min-h-screen">
