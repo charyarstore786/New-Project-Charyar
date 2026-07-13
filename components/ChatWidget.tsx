@@ -2,9 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { site } from "@/lib/site";
+import { type DateRange, formatRange, parseHumanDateRange, quickRange, toIsoDate } from "@/lib/chat/dateRange";
 
 type Msg = { who: "bot" | "user"; text: string };
 type Step = "name" | "email" | "dates" | "typing-dates" | "confirm" | "done";
+type QuickPick = "This weekend" | "Next week" | "Next month";
+
+const QUICK_PICK_KIND: Record<QuickPick, "weekend" | "nextweek" | "nextmonth"> = {
+  "This weekend": "weekend",
+  "Next week": "nextweek",
+  "Next month": "nextmonth",
+};
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
 
@@ -56,21 +64,55 @@ export default function ChatWidget() {
     return v.replace(/\s+/g, " ").trim().slice(0, 120);
   }
 
-  function pickDates(choice: string) {
+  function pickDates(choice: QuickPick | "I'll type my dates") {
     if (choice === "I'll type my dates") {
       user(choice);
       setStep("typing-dates");
       bot("No problem — type your arrival and departure dates (e.g. 20–23 July).");
       return;
     }
-    confirmDates(choice);
+    checkDates(quickRange(QUICK_PICK_KIND[choice]), choice);
   }
 
-  function confirmDates(dates: string) {
-    user(dates);
-    setLead((l) => ({ ...l, stayDates: dates }));
-    setStep("confirm");
-    bot("Perfect. Just to confirm — shall I send this to the host?");
+  /** Checks a candidate date range against the real booking calendar (same
+   * availability + pricing engine as /book) instead of just logging raw text. */
+  async function checkDates(range: DateRange, guestText: string) {
+    user(guestText);
+    setBusy(true);
+    bot("Let me check the calendar…");
+    const formatted = formatRange(range.checkIn, range.checkOut);
+    try {
+      const res = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkIn: toIsoDate(range.checkIn),
+          checkOut: toIsoDate(range.checkOut),
+          guests: 1,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.quote) {
+        const price = (data.quote.total / 100).toLocaleString("en-GB", { style: "currency", currency: "GBP" });
+        bot(
+          `Good news — ${formatted} is available! ${data.quote.nights} night(s), total ${price}. Want me to pass this straight to the host?`,
+        );
+        setLead((l) => ({ ...l, stayDates: `${formatted} — available, ${price}` }));
+      } else if (res.status === 409) {
+        bot(`Ah, ${formatted} is already booked. I can still pass your enquiry to the host in case of a change — or try different dates?`);
+        setLead((l) => ({ ...l, stayDates: `${formatted} — NOT available` }));
+      } else {
+        bot(`${data.error || "Those dates don't quite work for a booking."} I can still note this for the host, or you can try different dates.`);
+        setLead((l) => ({ ...l, stayDates: `${formatted} — ${data.error || "invalid dates"}` }));
+      }
+    } catch {
+      bot("I couldn't reach the calendar just now, but I've noted your dates — the host will confirm by email.");
+      setLead((l) => ({ ...l, stayDates: formatted }));
+    } finally {
+      setBusy(false);
+      setStep("confirm");
+    }
   }
 
   async function submit(current: { name: string; email: string; stayDates: string }) {
@@ -117,8 +159,14 @@ export default function ChatWidget() {
       bot("Lovely! Which dates would you like to stay?");
     } else if (step === "typing-dates") {
       if (value.length < 3) return setError("Please tell us your dates.");
+      const range = parseHumanDateRange(value);
       setInput("");
-      confirmDates(value);
+      if (!range) {
+        user(value);
+        bot('Sorry, I couldn\'t quite read those dates — try a format like "20-23 July" or "14/08-17/08".');
+        return;
+      }
+      checkDates(range, value);
     }
   }
 
@@ -198,7 +246,7 @@ export default function ChatWidget() {
 
             {step === "dates" && (
               <div className="flex flex-wrap gap-2 self-start">
-                {["This weekend", "Next week", "Next month", "I'll type my dates"].map((o) => (
+                {(["This weekend", "Next week", "Next month", "I'll type my dates"] as const).map((o) => (
                   <button
                     key={o}
                     onClick={() => pickDates(o)}
@@ -236,7 +284,11 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {busy && <div className="self-start text-sm text-ink/50">Sending…</div>}
+            {busy && (
+              <div className="self-start text-sm text-ink/50">
+                {step === "typing-dates" || step === "dates" ? "Checking…" : "Sending…"}
+              </div>
+            )}
 
             {step === "done" && !busy && (
               <a
