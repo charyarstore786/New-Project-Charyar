@@ -3,6 +3,10 @@ import { getDashboardStats } from "@/lib/admin/stats";
 import { formatGbp } from "@/lib/booking/quote";
 import StatusBadge from "@/components/admin/StatusBadge";
 
+// Reads live DB data — must never be statically prerendered at build time
+// (no DB is reachable during the Vercel build step).
+export const dynamic = "force-dynamic";
+
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
