@@ -25,8 +25,9 @@ if (process.env.NODE_ENV === "production") {
       // authorization, Identity status) and reports errors.
       "connect-src 'self' https://api.stripe.com https://errors.stripe.com",
       // Stripe Elements (card fields) and the Identity verification modal
-      // both render inside Stripe-hosted iframes on our page.
-      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      // both render inside Stripe-hosted iframes on our page; Google Maps
+      // powers the embedded map in the Location section.
+      "frame-src https://js.stripe.com https://hooks.stripe.com https://www.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
