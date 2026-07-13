@@ -272,12 +272,12 @@ export default function Home() {
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl">
-            <Image
-              src="/photos/private-entrance.jpg"
-              alt="Private entrance to the studio"
-              width={800}
-              height={1000}
-              className="h-full w-full object-cover"
+            <iframe
+              title="Map showing the general area of the studio in Newport"
+              src="https://www.google.com/maps?q=Newport,+NP19,+UK&output=embed"
+              className="h-full min-h-[320px] w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
         </div>
