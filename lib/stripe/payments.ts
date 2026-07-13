@@ -26,6 +26,10 @@ export interface PaymentProvider {
     guestEmail: string;
     bookingReference: string;
   }): Promise<BookingPaymentSetup>;
+  /** Host approved — capture the previously-authorized stay total. */
+  captureStayPayment(paymentIntentId: string): Promise<void>;
+  /** Host rejected — release the authorization, guest is never charged. */
+  releaseStayPayment(paymentIntentId: string): Promise<void>;
 }
 
 class MockPayments implements PaymentProvider {
@@ -38,6 +42,14 @@ class MockPayments implements PaymentProvider {
       paymentIntentId: `mock_pi_${suffix()}`,
       setupIntentId: `mock_seti_${suffix()}`,
     };
+  }
+
+  async captureStayPayment(): Promise<void> {
+    // Mock: nothing to call out to.
+  }
+
+  async releaseStayPayment(): Promise<void> {
+    // Mock: nothing to call out to.
   }
 }
 
