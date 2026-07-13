@@ -1,8 +1,5 @@
 import type { NextConfig } from "next";
 
-// NOTE for step 4 (real Stripe): CSP will need js.stripe.com (script-src,
-// frame-src) and api.stripe.com (connect-src); Stripe Identity's inline
-// document scan also needs camera access, which `camera=(self)` allows.
 const securityHeaders: { key: string; value: string }[] = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -18,12 +15,18 @@ if (process.env.NODE_ENV === "production") {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // Next.js App Router injects inline bootstrap scripts/styles
-      "script-src 'self' 'unsafe-inline'",
+      // Next.js App Router injects inline bootstrap scripts/styles;
+      // js.stripe.com is Stripe.js itself (Elements + Identity).
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://images.unsplash.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.stripe.com",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      // Stripe.js calls the API directly from the browser (card
+      // authorization, Identity status) and reports errors.
+      "connect-src 'self' https://api.stripe.com https://errors.stripe.com",
+      // Stripe Elements (card fields) and the Identity verification modal
+      // both render inside Stripe-hosted iframes on our page.
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
