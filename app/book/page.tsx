@@ -4,7 +4,7 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Book Direct",
-  description: `Book The Newport Studio direct from £${site.nightlyRate}/night — live availability, instant request, the lowest rate guaranteed.`,
+  description: `Book Short Stay Newport direct from £${site.nightlyRate}/night — live availability, instant request, the lowest rate guaranteed.`,
 };
 
 export default function BookPage() {

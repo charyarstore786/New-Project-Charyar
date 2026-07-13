@@ -178,10 +178,12 @@ export default function BookingWizard() {
           </dt>
           <dd>{formatGbp(quote.accommodation)}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-ink/60">Cleaning fee</dt>
-          <dd>{formatGbp(quote.cleaningFee)}</dd>
-        </div>
+        {quote.cleaningFee > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-ink/60">Cleaning fee</dt>
+            <dd>{formatGbp(quote.cleaningFee)}</dd>
+          </div>
+        )}
         <div className="flex justify-between border-t border-ink/10 pt-2 text-base font-semibold">
           <dt>Total</dt>
           <dd>{formatGbp(quote.total)}</dd>
@@ -272,10 +274,12 @@ export default function BookingWizard() {
                     </span>
                     <span>{formatGbp(availability.nightlyRate * nights)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink/60">Cleaning fee</span>
-                    <span>{formatGbp(availability.cleaningFee)}</span>
-                  </div>
+                  {availability.cleaningFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-ink/60">Cleaning fee</span>
+                      <span>{formatGbp(availability.cleaningFee)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between pt-1 font-semibold">
                     <span>Total</span>
                     <span>{formatGbp(availability.nightlyRate * nights + availability.cleaningFee)}</span>

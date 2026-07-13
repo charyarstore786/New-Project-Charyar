@@ -3,7 +3,7 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
-  description: "Booking terms and conditions for The Newport Studio.",
+  description: "Booking terms and conditions for Short Stay Newport.",
 };
 
 export default function TermsPage() {

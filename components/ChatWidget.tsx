@@ -9,7 +9,7 @@ type Step = "name" | "email" | "dates" | "typing-dates" | "confirm" | "done";
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,63}(\.[^\s@]{2,24})+$/;
 
 const GREETING: Msg[] = [
-  { who: "bot", text: "Hi there! 👋 Welcome to The Newport Studio." },
+  { who: "bot", text: "Hi there! 👋 Welcome to Short Stay Newport." },
   {
     who: "bot",
     text: `We're a private, self-contained studio apartment in Newport, South Wales — sleeps 2, with its own entrance, free Wi-Fi and free parking from £${site.nightlyRate}/night. You're about a mile from the city centre and minutes from the M4, Celtic Manor and Newport station.`,
@@ -177,7 +177,7 @@ export default function ChatWidget() {
           <div className="flex items-center gap-3 bg-ink px-5 py-4 text-white">
             <span className="h-2.5 w-2.5 flex-none rounded-full bg-green-400 shadow-[0_0_0_3px_rgba(74,222,128,0.25)]" />
             <div>
-              <p className="text-sm font-semibold">The Newport Studio</p>
+              <p className="text-sm font-semibold">Short Stay Newport</p>
               <p className="text-xs text-white/60">Typically replies within a few hours</p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How The Newport Studio handles your personal data.",
+  description: "How Short Stay Newport handles your personal data.",
 };
 
 export default function PrivacyPage() {

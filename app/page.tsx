@@ -130,7 +130,7 @@ export default function Home() {
               Big on comfort.
             </h2>
             <p className="mt-5 leading-relaxed text-ink/70">
-              The Newport Studio is a fully self-contained apartment with its
+              Short Stay Newport is a fully self-contained apartment with its
               own private entrance — no shared hallways, no fuss. Inside you
               will find two comfortable single beds, a sofa, a dining table
               that doubles as a workspace, a kitchenette for light meals, and

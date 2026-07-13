@@ -51,7 +51,7 @@ export function buildICalFeed(
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//The Newport Studio//Direct Bookings//EN",
+    "PRODID:-//Short Stay Newport//Direct Bookings//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeText(opts.name)}`,

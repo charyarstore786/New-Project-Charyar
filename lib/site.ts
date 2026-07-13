@@ -1,5 +1,5 @@
 export const site = {
-  name: "The Newport Studio",
+  name: "Short Stay Newport",
   legalName: "Rental2Day Ltd",
   tagline: "A calm, private studio apartment in Newport, South Wales",
   email: "rental2dayltd@gmail.com",
@@ -7,12 +7,12 @@ export const site = {
   whatsappHref:
     "https://wa.me/447472469217?text=Hi%2C%20I%27m%20interested%20in%20booking%20The%20Newport%20Studio",
   nightlyRate: 100,
-  cleaningFee: 25,
+  cleaningFee: 0,
   deposit: 200,
   maxGuests: 2,
   minNights: 1,
   maxNights: 28,
-  checkIn: "3:00 PM",
+  checkIn: "4:00 PM",
   checkOut: "10:00 AM",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   address: {

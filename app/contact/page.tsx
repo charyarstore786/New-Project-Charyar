@@ -3,7 +3,7 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with your host at The Newport Studio.",
+  description: "Get in touch with your host at Short Stay Newport.",
 };
 
 export default function ContactPage() {

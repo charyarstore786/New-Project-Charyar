@@ -4,25 +4,29 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: "House Rules & FAQ",
   description:
-    "House rules, check-in times and frequently asked questions for The Newport Studio.",
+    "House rules, check-in times and frequently asked questions for Short Stay Newport.",
 };
 
 const rules = [
-  ["Maximum 2 guests", "The studio is set up for two people. Visitors and extra overnight guests are not permitted."],
-  ["No smoking or vaping", "The studio is strictly non-smoking, inside and at the entrance."],
-  ["No parties or events", "The studio is in a quiet residential area — please respect our neighbours."],
+  ["Maximum 2 guests", "The booking is valid only for the number of guests specified at the time of reservation."],
+  ["No unregistered guests", "No unregistered guests or overnight visitors are allowed without prior approval from the host."],
+  ["No smoking or vaping", "Smoking is not permitted inside the property. Smoking is permitted outside only."],
+  ["No parties or events", "Parties, gatherings and events are strictly prohibited — please respect our neighbours."],
   ["Quiet hours 10 PM – 8 AM", "Keep noise to a minimum during quiet hours."],
   ["No pets", "We are unable to accommodate pets."],
   ["Light meals only", "The kitchenette has a kettle, toaster and microwave. Full cooking is not permitted."],
+  ["Leave it as you found it", "Please leave the studio clean and tidy — excessive mess may incur a cleaning fee. Please don't move or remove furniture, decor or amenities."],
+  ["Report issues promptly", "If anything is damaged or needs attention, please let us know straight away so we can sort it quickly."],
   ["ID verification required", "For everyone's security, the lead guest must complete a quick photo ID check before the booking is confirmed."],
-  [`£${site.deposit} damage deposit`, `A £${site.deposit} deposit is held on your card on the day of check-in and released automatically after checkout, provided the studio is left as found.`],
-  ["Parking", "Free street parking is available nearby. Finding a legal parking spot is the guest's responsibility."],
+  [`£${site.deposit} damage deposit`, `A £${site.deposit} deposit is held on your card on the day of check-in and released after checkout, provided the studio is left as found.`],
+  ["Parking", "Free street parking is available on a first-come, first-served basis. Please don't park on double yellow lines or block driveways — the host isn't responsible for damage to or theft from your vehicle."],
+  ["Breach of house rules", "Breaching the guest limit, house rules or hosting an event may result in immediate cancellation without refund, and possible additional charges."],
 ];
 
 const faqs = [
   [
     "What are the check-in and check-out times?",
-    `Check-in is from ${site.checkIn} and check-out is by ${site.checkOut}. Full check-in instructions are emailed to you the day before arrival.`,
+    `Check-in is from ${site.checkIn} and check-out is by ${site.checkOut}. Early check-in or late check-out may be available for an additional fee, subject to availability — just ask. Full check-in instructions are emailed to you the day before arrival.`,
   ],
   [
     "Is the studio completely private?",

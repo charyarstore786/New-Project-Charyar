@@ -45,7 +45,7 @@ export default function Header() {
             transparent ? "" : "title-tricolor"
           }`}
         >
-          The Newport Studio
+          Short Stay Newport
         </Link>
 
         <nav className="hidden items-center gap-3 text-sm md:flex">

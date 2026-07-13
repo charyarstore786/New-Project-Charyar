@@ -1,5 +1,5 @@
 /**
- * The Newport Studio — lead-capture chat widget server.
+ * Short Stay Newport — lead-capture chat widget server.
  * Plain Node.js, no dependencies.
  *
  *   node server.js          → http://localhost:3999
