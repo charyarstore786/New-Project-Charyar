@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { site } from "@/lib/site";
 import { type DateRange, formatRange, parseHumanDateRange, quickRange, toIsoDate } from "@/lib/chat/dateRange";
+import { matchFaq } from "@/lib/chat/faq";
 
 type Msg = { who: "bot" | "user"; text: string };
 type Step = "name" | "email" | "dates" | "typing-dates" | "confirm" | "done";
@@ -34,6 +35,7 @@ export default function ChatWidget() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [lead, setLead] = useState({ name: "", email: "", stayDates: "" });
+  const [faqMode, setFaqMode] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -137,11 +139,37 @@ export default function ChatWidget() {
     }
   }
 
+  function enterFaqMode() {
+    setFaqMode(true);
+    bot("Sure — ask me anything about the studio (parking, check-in, deposit, pets, Wi-Fi…). Type \"back\" any time to continue where you left off.");
+  }
+
+  function exitFaqMode() {
+    setFaqMode(false);
+    bot("Welcome back! Let's continue.");
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const value = sanitize(input);
     if (!value || busy) return;
+
+    if (faqMode) {
+      user(value);
+      setInput("");
+      if (/^back$/i.test(value)) {
+        exitFaqMode();
+        return;
+      }
+      const answer = matchFaq(value);
+      bot(
+        answer
+          ? answer
+          : "I'm not sure about that one — I'll pass it to the host to answer directly. Type another question, or \"back\" to continue.",
+      );
+      return;
+    }
 
     if (step === "name") {
       if (value.length < 2) return setError("Please enter your name (at least 2 characters).");
@@ -244,7 +272,25 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {step === "dates" && (
+            {faqMode ? (
+              <button
+                onClick={exitFaqMode}
+                className="self-start rounded-full border border-ink/20 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-ink/5"
+              >
+                ⬅ Back to booking
+              </button>
+            ) : (
+              step !== "done" && (
+                <button
+                  onClick={enterFaqMode}
+                  className="self-start rounded-full border border-ink/20 px-3.5 py-1.5 text-xs font-medium transition-colors hover:bg-ink/5"
+                >
+                  ❓ Ask a question instead
+                </button>
+              )
+            )}
+
+            {!faqMode && step === "dates" && (
               <div className="flex flex-wrap gap-2 self-start">
                 {(["This weekend", "Next week", "Next month", "I'll type my dates"] as const).map((o) => (
                   <button
@@ -258,7 +304,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {step === "confirm" && !busy && (
+            {!faqMode && step === "confirm" && !busy && (
               <div className="self-start rounded-2xl border border-ink/10 bg-white p-3 text-sm shadow-sm">
                 <p><span className="font-medium">Name:</span> {lead.name}</p>
                 <p><span className="font-medium">Email:</span> {lead.email}</p>
@@ -310,13 +356,13 @@ export default function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               type="text"
               maxLength={120}
-              placeholder="Type your reply…"
+              placeholder={faqMode ? "Ask a question…" : "Type your reply…"}
               aria-label="Your reply"
               className="min-w-0 flex-1 rounded-full border border-ink/20 px-4 py-2.5 text-sm outline-none focus:border-accent"
             />
             <button
               type="submit"
-              disabled={busy || step === "dates" || step === "confirm" || step === "done"}
+              disabled={busy || (!faqMode && (step === "dates" || step === "confirm" || step === "done"))}
               className="btn-fancy px-5 py-2 text-sm disabled:opacity-40"
             >
               Send
