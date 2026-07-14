@@ -109,3 +109,36 @@ model DamageClaim {
   stripeChargeId String?
   createdAt      DateTime @default(now())
 }
+
+// Single-row table (id is always "singleton") holding the admin-editable
+// pricing/policy that used to be hardcoded in lib/site.ts. Falls back to
+// those hardcoded values (see lib/pricing.ts) until a row is saved.
+model Setting {
+  id          String   @id @default("singleton")
+  nightlyRate Int // pence
+  cleaningFee Int // pence
+  deposit     Int // pence
+  minNights   Int
+  maxNights   Int
+  maxGuests   Int
+  updatedAt   DateTime @updatedAt
+}
+
+// Date-range promotional pricing. endDate is exclusive (same convention as
+// Booking.checkOut). When multiple active deals overlap the same night, the
+// earliest-created one wins (see lib/pricing.ts).
+model Deal {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  // PERCENTAGE_OFF | FIXED_RATE
+  type      String
+  // percentage 1-100 for PERCENTAGE_OFF, pence for FIXED_RATE
+  value     Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate, endDate])
+}

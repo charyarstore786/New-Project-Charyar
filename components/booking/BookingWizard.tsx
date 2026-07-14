@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Calendar from "./Calendar";
 import StripePaymentForm from "./StripePaymentForm";
-import { formatGbp, type Quote } from "@/lib/booking/quote";
+import { formatGbp, type Quote } from "@/lib/booking/format";
 import { getBrowserStripe, stripeConfigured } from "@/lib/stripe/browserClient";
 import { site } from "@/lib/site";
 

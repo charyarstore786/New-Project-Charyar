@@ -11,6 +11,8 @@ import { propertyPrivate } from "@/lib/property-private";
 export type CheckInInstructionsInput = {
   firstName: string;
   checkInDate: string;
+  /** Pounds — live pricing at send time, not the lib/site.ts default. */
+  deposit: number;
 };
 
 export function checkInInstructionsSubject(): string {
@@ -32,7 +34,7 @@ Key Box Code: ${propertyPrivate.keyBoxCode}
 
 Parking: Free street parking is available. Please avoid parking on double yellow lines or blocking driveways.
 
-A £${site.deposit} damage deposit hold will be placed on your saved card around your arrival — this is a hold, not a charge, and is released automatically after checkout provided the studio is left as found.
+A £${input.deposit} damage deposit hold will be placed on your saved card around your arrival — this is a hold, not a charge, and is released automatically after checkout provided the studio is left as found.
 
 Any questions before you arrive, just reply to this email or message us on WhatsApp.
 

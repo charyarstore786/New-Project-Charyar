@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "House Rules & FAQ",
@@ -7,62 +8,71 @@ export const metadata: Metadata = {
     "House rules, check-in times and frequently asked questions for Short Stay Newport.",
 };
 
-const rules = [
-  ["Maximum 2 guests", "The booking is valid only for the number of guests specified at the time of reservation."],
-  ["No unregistered guests", "No unregistered guests or overnight visitors are allowed without prior approval from the host."],
-  ["No smoking or vaping", "Smoking is not permitted inside the property. Smoking is permitted outside only."],
-  ["No parties or events", "Parties, gatherings and events are strictly prohibited — please respect our neighbours."],
-  ["Quiet hours 10 PM – 8 AM", "Keep noise to a minimum during quiet hours."],
-  ["No pets", "We are unable to accommodate pets."],
-  ["Light meals only", "The kitchenette has a kettle, toaster and microwave. Full cooking is not permitted."],
-  ["Leave it as you found it", "Please leave the studio clean and tidy — excessive mess may incur a cleaning fee. Please don't move or remove furniture, decor or amenities."],
-  ["Report issues promptly", "If anything is damaged or needs attention, please let us know straight away so we can sort it quickly."],
-  ["ID verification required", "For everyone's security, the lead guest must complete a quick photo ID check before the booking is confirmed."],
-  [`£${site.deposit} damage deposit`, `A £${site.deposit} deposit is held on your card on the day of check-in and released after checkout, provided the studio is left as found.`],
-  ["Parking", "Free street parking is available on a first-come, first-served basis. Please don't park on double yellow lines or block driveways — the host isn't responsible for damage to or theft from your vehicle."],
-  ["Breach of house rules", "Breaching the guest limit, house rules or hosting an event may result in immediate cancellation without refund, and possible additional charges."],
-];
+export const revalidate = 60;
 
-const faqs = [
-  [
-    "What are the check-in and check-out times?",
-    `Check-in is from ${site.checkIn} and check-out is by ${site.checkOut}. Early check-in or late check-out may be available for an additional fee, subject to availability — just ask. Full check-in instructions are emailed to you the day before arrival.`,
-  ],
-  [
-    "Is the studio completely private?",
-    "Yes — it is fully self-contained with its own private entrance, bathroom and kitchenette. You won't share anything with anyone.",
-  ],
-  [
-    "Can I cook in the studio?",
-    "The kitchenette is designed for light meals: kettle, toaster and microwave, with complimentary tea, coffee and sugar. Full cooking isn't permitted, but Newport city centre — a mile away — has plenty of restaurants and takeaways.",
-  ],
-  [
-    "How does the damage deposit work?",
-    `Your card details are saved securely when you book — nothing is charged. On the day of check-in a £${site.deposit} hold is placed on the card, and it is released automatically after checkout once the studio is checked. You only pay if something is damaged.`,
-  ],
-  [
-    "Why do you need my ID?",
-    "A quick photo ID check (passport, driving licence or national ID) keeps the studio safe and secure for every guest. It takes about a minute on your phone and your documents are handled by our secure verification provider — we never store them ourselves.",
-  ],
-  [
-    "Is parking available?",
-    "Yes, free street parking is available near the studio. Please park legally — this is the guest's responsibility.",
-  ],
-  [
-    "Is there a washing machine?",
-    "Yes — the studio has both a washing machine and a tumble dryer, plus an iron and ironing board.",
-  ],
-  [
-    "How far is the Celtic Manor / ICC Wales?",
-    "About 2 miles — roughly a 5–10 minute drive. Cardiff is around 10 miles and Bristol Airport about 50 minutes by car.",
-  ],
-  [
-    "When will I get the address and entry details?",
-    "The full address is shared once your booking is confirmed, and detailed check-in instructions are emailed the day before you arrive.",
-  ],
-];
+function buildRules(deposit: number) {
+  return [
+    ["Maximum 2 guests", "The booking is valid only for the number of guests specified at the time of reservation."],
+    ["No unregistered guests", "No unregistered guests or overnight visitors are allowed without prior approval from the host."],
+    ["No smoking or vaping", "Smoking is not permitted inside the property. Smoking is permitted outside only."],
+    ["No parties or events", "Parties, gatherings and events are strictly prohibited — please respect our neighbours."],
+    ["Quiet hours 10 PM – 8 AM", "Keep noise to a minimum during quiet hours."],
+    ["No pets", "We are unable to accommodate pets."],
+    ["Light meals only", "The kitchenette has a kettle, toaster and microwave. Full cooking is not permitted."],
+    ["Leave it as you found it", "Please leave the studio clean and tidy — excessive mess may incur a cleaning fee. Please don't move or remove furniture, decor or amenities."],
+    ["Report issues promptly", "If anything is damaged or needs attention, please let us know straight away so we can sort it quickly."],
+    ["ID verification required", "For everyone's security, the lead guest must complete a quick photo ID check before the booking is confirmed."],
+    [`£${deposit} damage deposit`, `A £${deposit} deposit is held on your card on the day of check-in and released after checkout, provided the studio is left as found.`],
+    ["Parking", "Free street parking is available on a first-come, first-served basis. Please don't park on double yellow lines or block driveways — the host isn't responsible for damage to or theft from your vehicle."],
+    ["Breach of house rules", "Breaching the guest limit, house rules or hosting an event may result in immediate cancellation without refund, and possible additional charges."],
+  ];
+}
 
-export default function RulesPage() {
+function buildFaqs(deposit: number) {
+  return [
+    [
+      "What are the check-in and check-out times?",
+      `Check-in is from ${site.checkIn} and check-out is by ${site.checkOut}. Early check-in or late check-out may be available for an additional fee, subject to availability — just ask. Full check-in instructions are emailed to you the day before arrival.`,
+    ],
+    [
+      "Is the studio completely private?",
+      "Yes — it is fully self-contained with its own private entrance, bathroom and kitchenette. You won't share anything with anyone.",
+    ],
+    [
+      "Can I cook in the studio?",
+      "The kitchenette is designed for light meals: kettle, toaster and microwave, with complimentary tea, coffee and sugar. Full cooking isn't permitted, but Newport city centre — a mile away — has plenty of restaurants and takeaways.",
+    ],
+    [
+      "How does the damage deposit work?",
+      `Your card details are saved securely when you book — nothing is charged. On the day of check-in a £${deposit} hold is placed on the card, and it is released automatically after checkout once the studio is checked. You only pay if something is damaged.`,
+    ],
+    [
+      "Why do you need my ID?",
+      "A quick photo ID check (passport, driving licence or national ID) keeps the studio safe and secure for every guest. It takes about a minute on your phone and your documents are handled by our secure verification provider — we never store them ourselves.",
+    ],
+    [
+      "Is parking available?",
+      "Yes, free street parking is available near the studio. Please park legally — this is the guest's responsibility.",
+    ],
+    [
+      "Is there a washing machine?",
+      "Yes — the studio has both a washing machine and a tumble dryer, plus an iron and ironing board.",
+    ],
+    [
+      "How far is the Celtic Manor / ICC Wales?",
+      "About 2 miles — roughly a 5–10 minute drive. Cardiff is around 10 miles and Bristol Airport about 50 minutes by car.",
+    ],
+    [
+      "When will I get the address and entry details?",
+      "The full address is shared once your booking is confirmed, and detailed check-in instructions are emailed the day before you arrive.",
+    ],
+  ];
+}
+
+export default async function RulesPage() {
+  const { deposit } = await getPricing();
+  const rules = buildRules(deposit);
+  const faqs = buildFaqs(deposit);
   return (
     <div className="mx-auto max-w-4xl px-4 pb-24 pt-32 sm:px-6">
       <span className="btn-red px-4 py-1.5 text-xs uppercase tracking-[0.2em]">

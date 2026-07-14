@@ -7,7 +7,7 @@ import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getEmailProvider } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
-import { site } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
 
 function formatDisplayDate(iso: Date): string {
   return iso.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -118,10 +118,11 @@ export async function placeDeposit(bookingId: string) {
     return;
   }
 
+  const { deposit } = await getPricing();
   const result = await getDepositProvider().placeDepositHold({
     customerId: booking.stripeCustomerId,
     setupIntentId: booking.stripeSetupIntentId,
-    amountPence: site.deposit * 100,
+    amountPence: deposit * 100,
     bookingReference: booking.reference,
   });
 
@@ -131,8 +132,8 @@ export async function placeDeposit(bookingId: string) {
       bookingId,
       "DEPOSIT_HELD",
       result.status === "requires_action"
-        ? `£${site.deposit} hold placed but requires guest action (intent ${result.depositIntentId}).`
-        : `£${site.deposit} hold placed (intent ${result.depositIntentId}).`,
+        ? `£${deposit} hold placed but requires guest action (intent ${result.depositIntentId}).`
+        : `£${deposit} hold placed (intent ${result.depositIntentId}).`,
     );
   } else {
     await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", result.error);

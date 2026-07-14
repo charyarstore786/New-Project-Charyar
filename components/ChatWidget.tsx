@@ -17,19 +17,21 @@ const QUICK_PICK_KIND: Record<QuickPick, "weekend" | "nextweek" | "nextmonth"> =
 
 const EMAIL_RE = /^[^\s@]{1,64}@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
 
-const GREETING: Msg[] = [
-  { who: "bot", text: "Hi there! 👋 Welcome to Short Stay Newport." },
-  {
-    who: "bot",
-    text: `We're a private, self-contained studio apartment in Newport, South Wales — sleeps 2, with its own entrance, free Wi-Fi and free parking from £${site.nightlyRate}/night. You're about a mile from the city centre and minutes from the M4, Celtic Manor and Newport station.`,
-  },
-  { who: "bot", text: "I can pass your details straight to the host. What's your name?" },
-];
+function greeting(nightlyRate: number): Msg[] {
+  return [
+    { who: "bot", text: "Hi there! 👋 Welcome to Short Stay Newport." },
+    {
+      who: "bot",
+      text: `We're a private, self-contained studio apartment in Newport, South Wales — sleeps 2, with its own entrance, free Wi-Fi and free parking from £${nightlyRate}/night. You're about a mile from the city centre and minutes from the M4, Celtic Manor and Newport station.`,
+    },
+    { who: "bot", text: "I can pass your details straight to the host. What's your name?" },
+  ];
+}
 
-export default function ChatWidget() {
+export default function ChatWidget({ nightlyRate }: { nightlyRate: number }) {
   const [open, setOpen] = useState(false);
   const [teaser, setTeaser] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>(GREETING);
+  const [msgs, setMsgs] = useState<Msg[]>(() => greeting(nightlyRate));
   const [step, setStep] = useState<Step>("name");
   const [input, setInput] = useState("");
   const [error, setError] = useState("");

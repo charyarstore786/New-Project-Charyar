@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import Gallery from "@/components/Gallery";
-import { photos, site } from "@/lib/site";
+import { photos } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
+
+// Pricing/settings are admin-editable — cache pages for at most a minute so
+// changes show up quickly without going fully dynamic. Also revalidated
+// on-demand (revalidatePath) right when settings/deals are saved.
+export const revalidate = 60;
 
 const highlights = [
   { label: "Sleeps 2 guests", icon: "👥", title: "title-pink" },
@@ -64,7 +70,8 @@ const distances = [
   { place: "Bristol Airport", distance: "~50 min drive" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const { nightlyRate } = await getPricing();
   return (
     <>
       {/* Hero */}
@@ -93,7 +100,7 @@ export default function Home() {
           </p>
           <div className="animate-fade-up delay-300 mt-8 flex flex-wrap items-center gap-4">
             <Link href="/book" className="btn-fancy px-7 py-3">
-              Book Direct — from £{site.nightlyRate}/night
+              Book Direct — from £{nightlyRate}/night
             </Link>
             <Link
               href="/#gallery"
@@ -143,7 +150,7 @@ export default function Home() {
             </p>
             <div className="mt-7 flex items-baseline gap-3 rounded-2xl border border-accent/25 bg-accent/5 px-6 py-5">
               <span className="font-display text-4xl font-semibold text-accent">
-                £{site.nightlyRate}
+                £{nightlyRate}
               </span>
               <span className="text-ink/70">
                 per night · book direct & skip booking-site fees

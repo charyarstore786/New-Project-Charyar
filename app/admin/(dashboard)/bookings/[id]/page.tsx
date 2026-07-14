@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatGbp } from "@/lib/booking/quote";
 import { deriveDepositStatus } from "@/lib/booking/depositStatus";
+import { getPricing } from "@/lib/pricing";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ActionButtons from "./ActionButtons";
 
@@ -34,6 +35,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   });
 
   const depositStatus = deriveDepositStatus(events);
+  const { deposit: depositAmount } = await getPricing();
 
   let idSummary: Record<string, string> | null = null;
   try {
@@ -60,7 +62,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-6">
-        <ActionButtons bookingId={booking.id} status={booking.status} depositStatus={depositStatus} />
+        <ActionButtons bookingId={booking.id} status={booking.status} depositStatus={depositStatus} depositAmount={depositAmount} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

@@ -1,14 +1,18 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
+import { getPricing } from "@/lib/pricing";
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+export const revalidate = 60;
+
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  const { nightlyRate } = await getPricing();
   return (
     <>
       <Header />
       <main>{children}</main>
       <Footer />
-      <ChatWidget />
+      <ChatWidget nightlyRate={nightlyRate} />
     </>
   );
 }

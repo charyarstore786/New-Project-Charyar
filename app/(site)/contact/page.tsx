@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Contact",
   description: "Get in touch with your host at Short Stay Newport.",
 };
 
-export default function ContactPage() {
+export const revalidate = 60;
+
+export default async function ContactPage() {
+  const { nightlyRate, maxGuests } = await getPricing();
   return (
     <div className="mx-auto max-w-4xl px-4 pb-24 pt-32 sm:px-6">
       <span className="btn-blue px-4 py-1.5 text-xs uppercase tracking-[0.2em]">
@@ -60,8 +64,8 @@ export default function ContactPage() {
         </h2>
         <p className="mt-2 max-w-xl text-sm text-ink/70">
           Email or WhatsApp us your dates and we will confirm availability and
-          the total price — from £{site.nightlyRate} per night for up to{" "}
-          {site.maxGuests} guests.
+          the total price — from £{nightlyRate} per night for up to{" "}
+          {maxGuests} guests.
         </p>
       </div>
     </div>

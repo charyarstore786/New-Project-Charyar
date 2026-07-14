@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { DepositStatus } from "@/lib/booking/depositStatus";
-import { site } from "@/lib/site";
 import {
   addDamageClaim,
   approveBooking,
@@ -25,10 +24,12 @@ export default function ActionButtons({
   bookingId,
   status,
   depositStatus,
+  depositAmount,
 }: {
   bookingId: string;
   status: string;
   depositStatus: DepositStatus;
+  depositAmount: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -143,7 +144,7 @@ export default function ActionButtons({
       {showChargeForm && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-900">
-            Captures from the held £{site.deposit} card deposit. This is a real charge.
+            Captures from the held £{depositAmount} card deposit. This is a real charge.
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
             <label className="text-sm">

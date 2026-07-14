@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing payment details." }, { status: 422 });
   }
 
-  const validated = validateStay(body);
+  const validated = await validateStay(body);
   if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: 422 });
 
   const { checkIn, checkOut } = validated.stay;
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Those dates have just been booked — please pick different dates." }, { status: 409 });
   }
 
-  const quote = computeQuote(validated.stay);
+  const quote = await computeQuote(validated.stay);
 
   const result = await authorizeStayPayment({
     customerId,

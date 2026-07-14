@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
 
-  const validated = validateStay(body);
+  const validated = await validateStay(body);
   if (!validated.ok) {
     return NextResponse.json({ error: validated.error }, { status: 422 });
   }
@@ -34,5 +34,5 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ quote: computeQuote(validated.stay) });
+  return NextResponse.json({ quote: await computeQuote(validated.stay) });
 }

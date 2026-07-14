@@ -5,7 +5,7 @@
 
 import "server-only";
 import { db } from "@/lib/db";
-import { site } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
 import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getPaymentProvider } from "@/lib/stripe/payments";
 import { getEmailProvider } from "@/lib/email/send";
@@ -45,6 +45,8 @@ export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
   const candidates = await db.booking.findMany({
     where: { status: { in: ["APPROVED", "CHECKED_IN"] }, checkIn: { gte: today, lt: tomorrow } },
   });
+  if (candidates.length === 0) return summary;
+  const pricing = await getPricing();
 
   for (const booking of candidates) {
     try {
@@ -58,13 +60,13 @@ export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
       const result = await getDepositProvider().placeDepositHold({
         customerId: booking.stripeCustomerId,
         setupIntentId: booking.stripeSetupIntentId,
-        amountPence: site.deposit * 100,
+        amountPence: pricing.deposit * 100,
         bookingReference: booking.reference,
       });
 
       if (result.status === "held" || result.status === "requires_action") {
         await db.booking.update({ where: { id: booking.id }, data: { stripeDepositIntentId: result.depositIntentId } });
-        await logEvent(booking.id, "DEPOSIT_HELD", `£${site.deposit} hold placed (intent ${result.depositIntentId}) via cron.`);
+        await logEvent(booking.id, "DEPOSIT_HELD", `£${pricing.deposit} hold placed (intent ${result.depositIntentId}) via cron.`);
       } else {
         await logEvent(booking.id, "DEPOSIT_HOLD_DECLINED", `${result.error} (cron attempt — host should retry manually).`);
       }
@@ -117,11 +119,14 @@ export async function sendCheckInInstructions(): Promise<TaskSummary> {
     include: { guest: true },
   });
 
+  if (candidates.length === 0) return summary;
+  const { deposit } = await getPricing();
+
   for (const booking of candidates) {
     try {
       const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
       const subject = checkInInstructionsSubject();
-      const body = checkInInstructionsText({ firstName, checkInDate: formatDisplayDate(booking.checkIn) });
+      const body = checkInInstructionsText({ firstName, checkInDate: formatDisplayDate(booking.checkIn), deposit });
 
       await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
       await db.emailLog.create({ data: { bookingId: booking.id, type: "CHECK_IN_INSTRUCTIONS", to: booking.guest.email, subject, body } });
@@ -149,11 +154,14 @@ export async function sendCheckOutInstructions(): Promise<TaskSummary> {
     include: { guest: true },
   });
 
+  if (candidates.length === 0) return summary;
+  const { deposit } = await getPricing();
+
   for (const booking of candidates) {
     try {
       const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
       const subject = checkOutInstructionsSubject();
-      const body = checkOutInstructionsText({ firstName });
+      const body = checkOutInstructionsText({ firstName, deposit });
 
       await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
       await db.emailLog.create({ data: { bookingId: booking.id, type: "CHECK_OUT_INSTRUCTIONS", to: booking.guest.email, subject, body } });

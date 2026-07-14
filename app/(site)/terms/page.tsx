@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
+import { getPricing } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description: "Booking terms and conditions for Short Stay Newport.",
 };
 
-export default function TermsPage() {
+export const revalidate = 60;
+
+export default async function TermsPage() {
+  const { maxGuests, deposit } = await getPricing();
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 pt-32 sm:px-6">
       <h1 className="title-blue font-display text-4xl font-semibold">
@@ -20,7 +24,7 @@ export default function TermsPage() {
             Bookings
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-5">
-            <li>The studio accommodates a maximum of {site.maxGuests} guests.</li>
+            <li>The studio accommodates a maximum of {maxGuests} guests.</li>
             <li>
               All bookings are subject to identity verification of the lead
               guest and host approval before confirmation.
@@ -41,13 +45,13 @@ export default function TermsPage() {
               once the booking is approved.
             </li>
             <li>
-              A refundable damage deposit of £{site.deposit} is held on the
+              A refundable damage deposit of £{deposit} is held on the
               lead guest&apos;s card on the day of check-in and released after
               checkout, subject to inspection.
             </li>
             <li>
               Damage beyond normal wear and tear may be charged against the
-              deposit, up to £{site.deposit}, within 10 days of checkout.
+              deposit, up to £{deposit}, within 10 days of checkout.
             </li>
           </ul>
         </section>

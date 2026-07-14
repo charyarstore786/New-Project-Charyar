@@ -1,43 +1,28 @@
-import { site } from "@/lib/site";
+import { getActiveDeals, getPricing, nightlyRateForNight } from "@/lib/pricing";
 import { addDays, nightsBetween, parseIsoDate, todayUtc } from "./dates";
+import { BOOKING_HORIZON_DAYS, type Quote, type StayInput } from "./format";
 
-/** How far ahead stays can be booked. */
-export const BOOKING_HORIZON_DAYS = 540;
-
-export type Quote = {
-  checkIn: string;
-  checkOut: string;
-  guests: number;
-  nights: number;
-  /** All money in pence */
-  nightlyRate: number;
-  accommodation: number;
-  cleaningFee: number;
-  total: number;
-  /** Held on card at check-in, never charged unless there is damage */
-  deposit: number;
-};
-
-export type StayInput = { checkIn: Date; checkOut: Date; guests: number };
+export { BOOKING_HORIZON_DAYS, formatGbp, type Quote, type StayInput } from "./format";
 
 /**
  * Validate raw wizard input into a stay, or return a human-readable error.
  * Availability is checked separately.
  */
-export function validateStay(raw: {
+export async function validateStay(raw: {
   checkIn?: unknown;
   checkOut?: unknown;
   guests?: unknown;
-}): { ok: true; stay: StayInput } | { ok: false; error: string } {
+}): Promise<{ ok: true; stay: StayInput } | { ok: false; error: string }> {
   const fail = (error: string) => ({ ok: false as const, error });
+  const pricing = await getPricing();
 
   const checkIn = parseIsoDate(raw.checkIn);
   const checkOut = parseIsoDate(raw.checkOut);
   if (!checkIn || !checkOut) return fail("Please choose valid check-in and check-out dates.");
 
   const guests = Number(raw.guests);
-  if (!Number.isInteger(guests) || guests < 1 || guests > site.maxGuests) {
-    return fail(`Number of guests must be between 1 and ${site.maxGuests}.`);
+  if (!Number.isInteger(guests) || guests < 1 || guests > pricing.maxGuests) {
+    return fail(`Number of guests must be between 1 and ${pricing.maxGuests}.`);
   }
 
   const today = todayUtc();
@@ -47,19 +32,30 @@ export function validateStay(raw: {
   }
 
   const nights = nightsBetween(checkIn, checkOut);
-  if (nights < site.minNights) return fail("Check-out must be after check-in.");
-  if (nights > site.maxNights) {
-    return fail(`Stays are limited to ${site.maxNights} nights — contact us for longer stays.`);
+  if (nights < pricing.minNights) return fail("Check-out must be after check-in.");
+  if (nights > pricing.maxNights) {
+    return fail(`Stays are limited to ${pricing.maxNights} nights — contact us for longer stays.`);
   }
 
   return { ok: true, stay: { checkIn, checkOut, guests } };
 }
 
-export function computeQuote(stay: StayInput): Quote {
+/** Sums each night's rate (base, or an active deal's rate if one covers that night). */
+export async function computeQuote(stay: StayInput): Promise<Quote> {
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
-  const nightlyRate = site.nightlyRate * 100;
-  const cleaningFee = site.cleaningFee * 100;
-  const accommodation = nightlyRate * nights;
+  const pricing = await getPricing();
+  const basePence = pricing.nightlyRate * 100;
+  const cleaningFee = pricing.cleaningFee * 100;
+
+  const deals = await getActiveDeals(stay.checkIn, stay.checkOut);
+  let accommodation = 0;
+  for (let n = 0; n < nights; n++) {
+    const night = addDays(stay.checkIn, n);
+    accommodation += nightlyRateForNight(night, basePence, deals);
+  }
+  // Display-only average — accommodation/total are the numbers that matter for charging.
+  const nightlyRate = Math.round(accommodation / nights);
+
   return {
     checkIn: stay.checkIn.toISOString().slice(0, 10),
     checkOut: stay.checkOut.toISOString().slice(0, 10),
@@ -69,16 +65,6 @@ export function computeQuote(stay: StayInput): Quote {
     accommodation,
     cleaningFee,
     total: accommodation + cleaningFee,
-    deposit: site.deposit * 100,
+    deposit: pricing.deposit * 100,
   };
-}
-
-/** "£1,234.50" (trims ".00") from pence. */
-export function formatGbp(pence: number): string {
-  const pounds = pence / 100;
-  return pounds.toLocaleString("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    minimumFractionDigits: pounds % 1 === 0 ? 0 : 2,
-  });
 }

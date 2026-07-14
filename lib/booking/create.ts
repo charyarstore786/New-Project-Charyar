@@ -51,7 +51,7 @@ export async function createBooking(input: {
   guest: GuestDetails;
   stripe: StripeContext;
 }): Promise<CreateBookingResult> {
-  const validated = validateStay(input);
+  const validated = await validateStay(input);
   if (!validated.ok) return { ok: false, error: validated.error, code: "INVALID" };
   const stay = validated.stay;
 
@@ -89,7 +89,7 @@ export async function createBooking(input: {
   const idSummary = await getVerificationSummary(input.stripe.verificationSessionId, input.guest.name);
 
   const reference = newReference();
-  const quote = computeQuote(stay);
+  const quote = await computeQuote(stay);
 
   try {
     const booking = await db.$transaction(async (tx) => {
