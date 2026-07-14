@@ -12,6 +12,7 @@ import { getEmailProvider } from "@/lib/email/send";
 import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import { checkInInstructionsSubject, checkInInstructionsText } from "@/lib/email/templates/checkInInstructions";
 import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/email/templates/checkOutInstructions";
+import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 
 const AUTO_RELEASE_AFTER_CHECKOUT_DAYS = 6;
 const AUTO_CANCEL_AFTER_PENDING_DAYS = 6;
@@ -172,6 +173,7 @@ export async function autoCancelStalePending(): Promise<TaskSummary> {
 
   const candidates = await db.booking.findMany({
     where: { status: "PENDING_APPROVAL", createdAt: { lte: cutoff } },
+    include: { guest: true },
   });
 
   for (const booking of candidates) {
@@ -181,6 +183,21 @@ export async function autoCancelStalePending(): Promise<TaskSummary> {
       }
       await db.booking.update({ where: { id: booking.id }, data: { status: "REJECTED" } });
       await logEvent(booking.id, "BOOKING_REJECTED", `Auto-rejected — no host decision within ${AUTO_CANCEL_AFTER_PENDING_DAYS} days.`);
+
+      const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+      const subject = rejectionEmailSubject();
+      const body = rejectionEmailText({
+        firstName,
+        checkInDate: formatDisplayDate(booking.checkIn),
+        checkOutDate: formatDisplayDate(booking.checkOut),
+      });
+      await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+      await db.emailLog.upsert({
+        where: { bookingId_type: { bookingId: booking.id, type: "REJECTED" } },
+        create: { bookingId: booking.id, type: "REJECTED", to: booking.guest.email, subject, body },
+        update: { subject, body, sentAt: new Date() },
+      });
+
       summary.processed++;
     } catch (err) {
       summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);

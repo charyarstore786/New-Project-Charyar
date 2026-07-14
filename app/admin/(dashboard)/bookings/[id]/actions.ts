@@ -6,6 +6,7 @@ import { getPaymentProvider } from "@/lib/stripe/payments";
 import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getEmailProvider } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
+import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { site } from "@/lib/site";
 
 function formatDisplayDate(iso: Date): string {
@@ -14,6 +15,26 @@ function formatDisplayDate(iso: Date): string {
 
 async function logEvent(bookingId: string, type: string, detail?: string) {
   await db.eventLog.create({ data: { bookingId, type, detail } });
+}
+
+/**
+ * Sends an email and logs it, but never throws — a transient provider
+ * failure (e.g. an unverified sending domain) must not roll back or 500 an
+ * action that already changed booking/payment state. Failures land in the
+ * activity log instead, so the host can see and retry (e.g. via "Resend
+ * confirmation").
+ */
+async function sendEmailSafely(input: { bookingId: string; to: string; type: string; subject: string; body: string }) {
+  try {
+    await getEmailProvider().send({ to: input.to, subject: input.subject, text: input.body });
+    await db.emailLog.upsert({
+      where: { bookingId_type: { bookingId: input.bookingId, type: input.type } },
+      create: { bookingId: input.bookingId, type: input.type, to: input.to, subject: input.subject, body: input.body },
+      update: { subject: input.subject, body: input.body, sentAt: new Date() },
+    });
+  } catch (err) {
+    await logEvent(input.bookingId, "EMAIL_SEND_FAILED", `${input.type}: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 export async function approveBooking(bookingId: string) {
@@ -35,7 +56,7 @@ export async function approveBooking(bookingId: string) {
 }
 
 export async function rejectBooking(bookingId: string, reason?: string) {
-  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { guest: true } });
   if (booking.status !== "PENDING_APPROVAL" && booking.status !== "PENDING_VERIFICATION") return;
 
   if (booking.stripePaymentIntentId) {
@@ -47,6 +68,19 @@ export async function rejectBooking(bookingId: string, reason?: string) {
     data: { status: "REJECTED", notes: reason || booking.notes },
   });
   await logEvent(bookingId, "BOOKING_REJECTED", reason || "Rejected by host. Authorization released.");
+
+  const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+  await sendEmailSafely({
+    bookingId,
+    to: booking.guest.email,
+    type: "REJECTED",
+    subject: rejectionEmailSubject(),
+    body: rejectionEmailText({
+      firstName,
+      checkInDate: formatDisplayDate(booking.checkIn),
+      checkOutDate: formatDisplayDate(booking.checkOut),
+    }),
+  });
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
@@ -60,19 +94,16 @@ export async function sendConfirmationEmail(bookingId: string) {
   });
 
   const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
-  const subject = confirmationEmailSubject();
-  const body = confirmationEmailText({
-    firstName,
-    checkInDate: formatDisplayDate(booking.checkIn),
-    checkOutDate: formatDisplayDate(booking.checkOut),
-  });
-
-  await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
-
-  await db.emailLog.upsert({
-    where: { bookingId_type: { bookingId, type: "CONFIRMATION" } },
-    create: { bookingId, type: "CONFIRMATION", to: booking.guest.email, subject, body },
-    update: { subject, body, sentAt: new Date() },
+  await sendEmailSafely({
+    bookingId,
+    to: booking.guest.email,
+    type: "CONFIRMATION",
+    subject: confirmationEmailSubject(),
+    body: confirmationEmailText({
+      firstName,
+      checkInDate: formatDisplayDate(booking.checkIn),
+      checkOutDate: formatDisplayDate(booking.checkOut),
+    }),
   });
 
   revalidatePath(`/admin/bookings/${bookingId}`);
