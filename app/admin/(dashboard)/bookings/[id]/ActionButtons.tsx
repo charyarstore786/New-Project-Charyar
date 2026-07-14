@@ -2,10 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import type { DepositStatus } from "@/lib/booking/depositStatus";
+import { site } from "@/lib/site";
 import {
   addDamageClaim,
   approveBooking,
+  chargeDeposit,
+  placeDeposit,
   rejectBooking,
+  releaseDeposit,
   sendConfirmationEmail,
   updateBookingStatus,
 } from "./actions";
@@ -19,17 +24,22 @@ const NEXT_STATUS: Record<string, { value: string; label: string }[]> = {
 export default function ActionButtons({
   bookingId,
   status,
+  depositStatus,
 }: {
   bookingId: string;
   status: string;
+  depositStatus: DepositStatus;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
+  const [showChargeForm, setShowChargeForm] = useState(false);
   const [reason, setReason] = useState("");
   const [claimAmount, setClaimAmount] = useState("");
   const [claimNote, setClaimNote] = useState("");
+  const [chargeAmount, setChargeAmount] = useState("");
+  const [chargeNote, setChargeNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   function run(action: () => Promise<void>, ok: string) {
@@ -87,6 +97,39 @@ export default function ActionButtons({
           ✉ Resend confirmation
         </button>
 
+        {(depositStatus === "NONE" || depositStatus === "DECLINED") &&
+          ["APPROVED", "CHECKED_IN", "CHECKED_OUT"].includes(status) && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => placeDeposit(bookingId), "Deposit hold placed.")}
+              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+            >
+              🔒 {depositStatus === "DECLINED" ? "Retry deposit hold" : "Place deposit hold"}
+            </button>
+          )}
+
+        {depositStatus === "HELD" && (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => releaseDeposit(bookingId), "Deposit released.")}
+              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+            >
+              🔓 Release deposit
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setShowChargeForm((v) => !v)}
+              className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              💳 Charge damage
+            </button>
+          </>
+        )}
+
         <button
           type="button"
           disabled={pending}
@@ -96,6 +139,52 @@ export default function ActionButtons({
           🧾 Add damage claim
         </button>
       </div>
+
+      {showChargeForm && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-900">
+            Captures from the held £{site.deposit} card deposit. This is a real charge.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <label className="text-sm">
+              Amount (£)
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={chargeAmount}
+                onChange={(e) => setChargeAmount(e.target.value)}
+                className="mt-1 block w-32 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-400"
+              />
+            </label>
+            <label className="flex-1 text-sm">
+              Note
+              <input
+                type="text"
+                value={chargeNote}
+                onChange={(e) => setChargeNote(e.target.value)}
+                className="mt-1 block w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-400"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={pending || !chargeAmount || !chargeNote}
+            onClick={() => {
+              run(
+                () => chargeDeposit(bookingId, Math.round(Number(chargeAmount) * 100), chargeNote),
+                "Deposit charged.",
+              );
+              setShowChargeForm(false);
+              setChargeAmount("");
+              setChargeNote("");
+            }}
+            className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            Confirm charge
+          </button>
+        </div>
+      )}
 
       {showRejectForm && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">

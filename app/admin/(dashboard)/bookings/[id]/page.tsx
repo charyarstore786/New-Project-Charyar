@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatGbp } from "@/lib/booking/quote";
+import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ActionButtons from "./ActionButtons";
 
@@ -32,6 +33,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     orderBy: { createdAt: "desc" },
   });
 
+  const depositStatus = deriveDepositStatus(events);
+
   let idSummary: Record<string, string> | null = null;
   try {
     idSummary = booking.guest.idSummary ? JSON.parse(booking.guest.idSummary) : null;
@@ -57,7 +60,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-6">
-        <ActionButtons bookingId={booking.id} status={booking.status} />
+        <ActionButtons bookingId={booking.id} status={booking.status} depositStatus={depositStatus} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -93,6 +96,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               value={<code className="text-xs">{booking.stripePaymentIntentId || "—"}</code>}
             />
             <Row label="Setup intent" value={<code className="text-xs">{booking.stripeSetupIntentId || "—"}</code>} />
+            <Row label="Deposit status" value={depositStatus} />
+            <Row label="Deposit intent" value={<code className="text-xs">{booking.stripeDepositIntentId || "—"}</code>} />
           </div>
         </section>
 

@@ -8,8 +8,7 @@ import { propertyPrivate } from "@/lib/property-private";
  * exact unit address and key box code are ever sent to a guest, and it
  * only happens for a specific, approved booking.
  *
- * Not wired to Resend yet — lib/email/send.ts will call this once the
- * email-automation step (PLAN.md implementation order, step 6) is built.
+ * Sent via lib/email/send.ts.
  */
 
 export type ConfirmationEmailInput = {
