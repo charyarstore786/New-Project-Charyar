@@ -149,6 +149,30 @@ export default function ChatWidget() {
     bot("Welcome back! Let's continue.");
   }
 
+  async function askQuestion(question: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const data = await res.json().catch(() => ({}));
+      bot(
+        res.ok && data.answer
+          ? data.answer
+          : "I'm not sure about that one — I'll pass it to the host to answer directly. Type another question, or \"back\" to continue.",
+      );
+    } catch {
+      // Network hiccup — fall back to the local keyword matcher so FAQ mode
+      // still works offline rather than going silent.
+      const answer = matchFaq(question);
+      bot(answer ?? "I'm not sure about that one — I'll pass it to the host to answer directly. Type another question, or \"back\" to continue.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -162,12 +186,7 @@ export default function ChatWidget() {
         exitFaqMode();
         return;
       }
-      const answer = matchFaq(value);
-      bot(
-        answer
-          ? answer
-          : "I'm not sure about that one — I'll pass it to the host to answer directly. Type another question, or \"back\" to continue.",
-      );
+      askQuestion(value);
       return;
     }
 
