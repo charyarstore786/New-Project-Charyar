@@ -55,9 +55,13 @@ export async function syncExternalBlocks(force = false): Promise<void> {
         },
       }),
     ),
-    // Blocks that disappeared from the feed were cancelled upstream
+    // Blocks that disappeared from the feed were cancelled upstream — or are
+    // stale leftovers from a previous provider (e.g. mock rows from before a
+    // real URL was configured). This table only ever holds synced external
+    // blocks, so it's safe to prune anything not in the current feed
+    // regardless of which provider originally wrote it.
     db.calendarBlock.deleteMany({
-      where: { source: provider.name, uid: { notIn: seenUids } },
+      where: { uid: { notIn: seenUids } },
     }),
   ]);
 }

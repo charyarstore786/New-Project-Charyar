@@ -41,7 +41,14 @@ export function parseIcs(ics: string): ExternalBlock[] {
       continue;
     }
     if (line === "END:VEVENT") {
-      if (current?.uid && current.start && current.end) {
+      // Some feeds (e.g. HomeAway/Vrbo blocks relayed through Sympl) omit UID
+      // entirely — a missing UID must never drop the event, since that's a
+      // real booking's dates silently not getting blocked. Synthesize a
+      // stable one from the fields we do have so re-syncs stay idempotent.
+      if (current && current.start && current.end) {
+        if (!current.uid) {
+          current.uid = `generated-${current.start}-${current.end}-${(current.summary ?? "").replace(/\s+/g, "_")}`;
+        }
         blocks.push(current as ExternalBlock);
       }
       current = null;
