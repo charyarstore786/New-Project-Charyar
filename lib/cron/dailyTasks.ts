@@ -15,7 +15,7 @@ import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/ema
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
 
-const AUTO_RELEASE_AFTER_CHECKOUT_DAYS = 6;
+const AUTO_RELEASE_AFTER_CHECKOUT_HOURS = 24;
 const AUTO_CANCEL_AFTER_PENDING_DAYS = 6;
 const GDPR_PURGE_AFTER_CHECKOUT_DAYS = 30;
 
@@ -178,9 +178,13 @@ export async function retryDeclinedDeposits(): Promise<TaskSummary> {
   return summary;
 }
 
-/** Auto-releases deposit holds ~6 days after checkout if the host took no action. */
+/**
+ * Auto-releases deposit holds 24 hours after checkout if the host took no
+ * action. Uses an exact elapsed-time cutoff (not day-snapped) so it releases
+ * as close to the 24-hour mark as this once-daily cron allows.
+ */
 export async function autoReleaseDeposits(): Promise<TaskSummary> {
-  const cutoff = addDays(startOfUtcDay(new Date()), -AUTO_RELEASE_AFTER_CHECKOUT_DAYS);
+  const cutoff = new Date(Date.now() - AUTO_RELEASE_AFTER_CHECKOUT_HOURS * 60 * 60 * 1000);
   const summary: TaskSummary = { processed: 0, errors: [] };
 
   const candidates = await db.booking.findMany({
@@ -193,7 +197,7 @@ export async function autoReleaseDeposits(): Promise<TaskSummary> {
       if (deriveDepositStatus(events) !== "HELD") continue;
 
       await getDepositProvider().releaseDepositHold(booking.stripeDepositIntentId!);
-      await logEvent(booking.id, "DEPOSIT_RELEASED", `Hold ${booking.stripeDepositIntentId} auto-released ${AUTO_RELEASE_AFTER_CHECKOUT_DAYS} days after checkout.`);
+      await logEvent(booking.id, "DEPOSIT_RELEASED", `Hold ${booking.stripeDepositIntentId} auto-released ${AUTO_RELEASE_AFTER_CHECKOUT_HOURS} hours after checkout.`);
       summary.processed++;
     } catch (err) {
       summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);
