@@ -44,9 +44,11 @@ export default function ActionButtons({
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [showChargeForm, setShowChargeForm] = useState(false);
+  const [showDepositForm, setShowDepositForm] = useState(false);
   const [showDeleteForm, setShowDeleteForm] = useState(false);
   const [reason, setReason] = useState("");
   const [cancelReason, setCancelReason] = useState("");
+  const [depositHoldAmount, setDepositHoldAmount] = useState(String(depositAmount));
   const [claimAmount, setClaimAmount] = useState("");
   const [claimNote, setClaimNote] = useState("");
   const [chargeAmount, setChargeAmount] = useState("");
@@ -126,7 +128,10 @@ export default function ActionButtons({
             <button
               type="button"
               disabled={pending}
-              onClick={() => run(() => placeDeposit(bookingId), "Deposit hold placed.")}
+              onClick={() => {
+                setDepositHoldAmount(String(depositAmount));
+                setShowDepositForm((v) => !v);
+              }}
               className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
             >
               🔒 {depositStatus === "DECLINED" ? "Retry deposit hold" : "Place deposit hold"}
@@ -217,6 +222,40 @@ export default function ActionButtons({
             className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
           >
             Confirm charge
+          </button>
+        </div>
+      )}
+
+      {showDepositForm && (
+        <div className="rounded-xl border border-ink/15 bg-white p-4">
+          <p className="text-sm text-ink/70">
+            Defaults to the site's standard £{depositAmount} deposit — lower it for a guest who can only support a
+            smaller hold (e.g. £100), or raise it, before confirming.
+          </p>
+          <label className="mt-3 block text-sm">
+            Amount (£)
+            <input
+              type="number"
+              min="1"
+              step="0.01"
+              value={depositHoldAmount}
+              onChange={(e) => setDepositHoldAmount(e.target.value)}
+              className="mt-1 block w-32 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending || !depositHoldAmount || Number(depositHoldAmount) <= 0}
+            onClick={() => {
+              run(
+                () => placeDeposit(bookingId, Math.round(Number(depositHoldAmount) * 100)),
+                "Deposit hold placed.",
+              );
+              setShowDepositForm(false);
+            }}
+            className="mt-3 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/80 disabled:opacity-50"
+          >
+            Confirm hold
           </button>
         </div>
       )}

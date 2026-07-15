@@ -150,8 +150,13 @@ export async function chargeStayTotal(bookingId: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
-/** Places the £200 off-session hold on the card saved at booking time. */
-export async function placeDeposit(bookingId: string) {
+/**
+ * Places an off-session deposit hold on the card saved at booking time.
+ * Defaults to the site's standard deposit amount, but the host can pass a
+ * lower (or higher) amount for a specific guest's situation — e.g. a guest
+ * who can only support £100 rather than the usual £200.
+ */
+export async function placeDeposit(bookingId: string, customAmountPence?: number) {
   const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { guest: true } });
   if (!booking.stripeCustomerId || !booking.stripeSetupIntentId) {
     await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", "No saved card on this booking.");
@@ -159,11 +164,15 @@ export async function placeDeposit(bookingId: string) {
     return;
   }
 
-  const { deposit } = await getPricing();
+  const { deposit: defaultDeposit } = await getPricing();
+  const amountPence =
+    Number.isInteger(customAmountPence) && customAmountPence! > 0 ? customAmountPence! : defaultDeposit * 100;
+  const depositPounds = amountPence / 100;
+
   const result = await getDepositProvider().placeDepositHold({
     customerId: booking.stripeCustomerId,
     setupIntentId: booking.stripeSetupIntentId,
-    amountPence: deposit * 100,
+    amountPence,
     bookingReference: booking.reference,
   });
 
@@ -173,8 +182,8 @@ export async function placeDeposit(bookingId: string) {
       bookingId,
       "DEPOSIT_HELD",
       result.status === "requires_action"
-        ? `£${deposit} hold placed but requires guest action (intent ${result.depositIntentId}).`
-        : `£${deposit} hold placed (intent ${result.depositIntentId}).`,
+        ? `£${depositPounds} hold placed but requires guest action (intent ${result.depositIntentId}).`
+        : `£${depositPounds} hold placed (intent ${result.depositIntentId}).`,
     );
   } else {
     await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", result.error);
@@ -184,7 +193,7 @@ export async function placeDeposit(bookingId: string) {
       to: booking.guest.email,
       type: "DEPOSIT_DECLINED",
       subject: depositDeclinedEmailSubject(),
-      body: depositDeclinedEmailText({ firstName, deposit }),
+      body: depositDeclinedEmailText({ firstName, deposit: depositPounds }),
     });
   }
 
