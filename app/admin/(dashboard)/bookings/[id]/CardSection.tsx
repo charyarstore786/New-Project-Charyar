@@ -109,6 +109,7 @@ export default function CardSection({ bookingId, guestName, guestEmail, total, h
               onConfirmed={() => pendingCard && saveCard(pendingCard.customerId, pendingCard.setupIntentId)}
               busyLabel="Saving…"
               submitLabel="Save card"
+              busy={pending}
             />
           </div>
         ) : (

@@ -570,6 +570,7 @@ export default function BookingWizard() {
                     onConfirmed={finalizeBooking}
                     busyLabel="Authorizing…"
                     submitLabel={`Authorize ${formatGbp(quote.total)} & request booking`}
+                    busy={busy}
                   />
                 </div>
               ) : (

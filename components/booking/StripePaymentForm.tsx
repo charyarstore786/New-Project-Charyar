@@ -8,26 +8,33 @@ function InnerForm({
   onConfirmed,
   busyLabel,
   submitLabel,
+  parentBusy,
 }: {
   onConfirmed: (paymentMethodId: string) => void;
   busyLabel: string;
   submitLabel: string;
+  parentBusy: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
+  // Only covers the Stripe.js confirm step — once that hands off to onConfirmed,
+  // parentBusy takes over, so a failure downstream (e.g. booking conflict) resets
+  // the button instead of leaving it stuck on the busy label forever.
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
+
+  const busy = confirming || parentBusy;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!stripe || !elements) return;
-    setSubmitting(true);
+    if (!stripe || !elements || busy) return;
+    setConfirming(true);
     setError("");
 
     const { error: submitError } = await elements.submit();
     if (submitError) {
       setError(submitError.message || "Please check your card details.");
-      setSubmitting(false);
+      setConfirming(false);
       return;
     }
 
@@ -38,7 +45,7 @@ function InnerForm({
 
     if (confirmError || !setupIntent) {
       setError(confirmError?.message || "Could not save your card. Please try again.");
-      setSubmitting(false);
+      setConfirming(false);
       return;
     }
 
@@ -46,12 +53,12 @@ function InnerForm({
       typeof setupIntent.payment_method === "string" ? setupIntent.payment_method : setupIntent.payment_method?.id;
     if (!paymentMethodId) {
       setError("Could not save your card. Please try again.");
-      setSubmitting(false);
+      setConfirming(false);
       return;
     }
 
+    setConfirming(false);
     onConfirmed(paymentMethodId);
-    // Leave submitting=true — parent takes over the busy state from here.
   }
 
   return (
@@ -64,10 +71,10 @@ function InnerForm({
       )}
       <button
         type="submit"
-        disabled={!stripe || submitting}
+        disabled={!stripe || busy}
         className="btn-fancy mt-6 px-6 py-3 disabled:opacity-40"
       >
-        {submitting ? busyLabel : submitLabel}
+        {busy ? busyLabel : submitLabel}
       </button>
     </form>
   );
@@ -78,13 +85,20 @@ export default function StripePaymentForm(props: {
   onConfirmed: (paymentMethodId: string) => void;
   busyLabel: string;
   submitLabel: string;
+  /** Parent's busy state for whatever happens after onConfirmed (e.g. authorizing payment, saving the booking) — keeps the button in sync instead of it staying stuck on the busy label if that later step fails. */
+  busy?: boolean;
 }) {
   return (
     <Elements
       stripe={getBrowserStripe()}
       options={{ clientSecret: props.clientSecret, appearance: { theme: "stripe" } }}
     >
-      <InnerForm onConfirmed={props.onConfirmed} busyLabel={props.busyLabel} submitLabel={props.submitLabel} />
+      <InnerForm
+        onConfirmed={props.onConfirmed}
+        busyLabel={props.busyLabel}
+        submitLabel={props.submitLabel}
+        parentBusy={props.busy ?? false}
+      />
     </Elements>
   );
 }
