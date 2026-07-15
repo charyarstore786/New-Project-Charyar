@@ -132,6 +132,22 @@ model Setting {
   updatedAt   DateTime @updatedAt
 }
 
+// Chat-widget enquiries, submitted by the AI assistant's submit_lead tool
+// (see lib/chat/tools.ts). Previously written to a leads.json file, which
+// silently failed on Vercel's read-only production filesystem — every
+// real submission was lost until this replaced it with the database.
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  // Free-form summary the assistant writes — requested dates, quote if any,
+  // and/or the guest's question, whatever's relevant to that conversation.
+  message   String?
+  source    String   @default("chat")
+  createdAt DateTime @default(now())
+}
+
 // Date-range promotional pricing. endDate is exclusive (same convention as
 // Booking.checkOut). When multiple active deals overlap the same night, the
 // earliest-created one wins (see lib/pricing.ts).
