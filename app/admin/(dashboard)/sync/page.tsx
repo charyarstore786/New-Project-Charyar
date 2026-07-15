@@ -1,5 +1,5 @@
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { site } from "@/lib/site";
 import { getSymplIcalUrl } from "@/lib/pricing";
 import { BLOCKING_STATUSES } from "@/lib/booking/availability";
 import { toIsoDate } from "@/lib/booking/dates";
@@ -21,7 +21,12 @@ export default async function SyncPage() {
     }),
   ]);
 
-  const feedUrl = `${site.url.replace(/\/$/, "")}/api/calendar.ics`;
+  // Derived from the actual request, not NEXT_PUBLIC_SITE_URL — that env var
+  // was never set in Vercel, so relying on it silently showed "localhost" here.
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "localhost:3000";
+  const proto = headersList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const feedUrl = `${proto}://${host}/api/calendar.ics`;
 
   return (
     <div>
