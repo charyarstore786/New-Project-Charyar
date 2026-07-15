@@ -27,7 +27,7 @@ export type CreateBookingResult =
 // Unambiguous alphabet (no 0/O, 1/I/L) for guest-facing references
 const REF_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
-function newReference(): string {
+export function newReference(): string {
   return (
     "NS-" +
     Array.from(crypto.randomBytes(6))

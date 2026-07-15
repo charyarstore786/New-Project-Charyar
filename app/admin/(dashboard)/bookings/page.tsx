@@ -40,7 +40,12 @@ export default async function AdminBookingsPage({
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold">Bookings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold">Bookings</h1>
+        <Link href="/admin/bookings/new" className="btn-fancy px-4 py-2 text-sm">
+          + Add booking
+        </Link>
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
