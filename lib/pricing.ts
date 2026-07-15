@@ -41,6 +41,12 @@ export const getPricing = cache(async (): Promise<Pricing> => {
   };
 });
 
+/** Admin-configured iCal import URL (see /admin/sync), if one has been saved. */
+export const getSymplIcalUrl = cache(async (): Promise<string | null> => {
+  const row = await db.setting.findUnique({ where: { id: "singleton" }, select: { symplIcalUrl: true } });
+  return row?.symplIcalUrl || null;
+});
+
 export type DealRow = { startDate: Date; endDate: Date; type: string; value: number };
 
 /** Active deals overlapping [from, to) — pass no args for "all active deals" (e.g. for the admin list). */

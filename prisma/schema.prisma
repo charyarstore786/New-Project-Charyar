@@ -121,6 +121,10 @@ model Setting {
   minNights   Int
   maxNights   Int
   maxGuests   Int
+  // Sympl (or other) iCal feed URL to import external blocks from. Admin-editable
+  // (see /admin/sync) so it doesn't need a Vercel env var — falls back to
+  // SYMPL_ICAL_URL if this is unset (see lib/channel-manager).
+  symplIcalUrl String?
   updatedAt   DateTime @updatedAt
 }
 

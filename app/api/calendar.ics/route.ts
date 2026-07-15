@@ -1,38 +1,39 @@
 import { NextResponse } from "next/server";
-import { promises as fsp } from "fs";
-import path from "path";
 import { buildICalFeed, type CalendarBlock } from "@/lib/ical";
 import { site } from "@/lib/site";
+import { db } from "@/lib/db";
+import { BLOCKING_STATUSES } from "@/lib/booking/availability";
+import { toIsoDate } from "@/lib/booking/dates";
 
 /**
  * Outbound availability feed: GET /api/calendar.ics
  *
- * Serves a spec-valid iCalendar of dates the studio is NOT available for
- * direct booking. Paste this URL into Sympl once and every OTA behind it
- * blocks these dates automatically.
- *
- * Source: data/calendar-blocks.json — an array of { start, end, summary }
- * ranges (checkout date exclusive). The booking engine will append to this
- * file as direct bookings are confirmed; the owner can also block dates by
- * hand. A missing file just yields a valid, empty calendar.
+ * Spec-valid iCalendar of dates the studio is NOT available for direct
+ * booking, read live from the database. Paste this URL into Sympl (or any
+ * other channel manager) once and every OTA behind it blocks these dates
+ * automatically — see /admin/sync for the URL and a preview of what it
+ * currently contains.
  */
-
-const BLOCKS_FILE = path.join(process.cwd(), "data", "calendar-blocks.json");
 
 export const dynamic = "force-dynamic";
 
-async function readBlocks(): Promise<CalendarBlock[]> {
-  try {
-    const raw = await fsp.readFile(BLOCKS_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as CalendarBlock[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 export async function GET() {
-  const blocks = await readBlocks();
+  const bookings = await db.booking.findMany({
+    where: {
+      status: { in: [...BLOCKING_STATUSES] },
+      checkOut: { gt: new Date() },
+    },
+    select: { reference: true, checkIn: true, checkOut: true },
+    orderBy: { checkIn: "asc" },
+  });
+
+  const blocks: CalendarBlock[] = bookings.map((b) => ({
+    start: toIsoDate(b.checkIn),
+    end: toIsoDate(b.checkOut),
+    summary: `Reserved — ${b.reference}`,
+    uid: `booking-${b.reference}`,
+  }));
+
   const domain = new URL(site.url).hostname || "newportstudio.local";
 
   const feed = buildICalFeed(blocks, {

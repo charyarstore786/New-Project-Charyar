@@ -25,7 +25,7 @@ export async function syncExternalBlocks(force = false): Promise<void> {
   const now = Date.now();
   if (!force && now - lastSyncAt < SYNC_INTERVAL_MS) return;
 
-  const provider = getChannelProvider();
+  const provider = await getChannelProvider();
   let blocks;
   try {
     blocks = await provider.getBlocks();
