@@ -47,17 +47,32 @@ class MockGeocoding implements GeocodingProvider {
   }
 }
 
+// Mapbox returns its best guess even for gibberish input rather than an
+// empty result — e.g. "asdkjaskdjaskjd nonexistent place 12345" matched a
+// street in Montreal at relevance 0.5, purely because "12345" happened to
+// look like a house number. Real full addresses scored 0.85-1.0 in testing;
+// garbage/placeholder-like text scored 0.35-0.55. Below this, treat it as
+// unresolved (see create.ts: unresolved defaults to auto-approve).
+const MIN_RELEVANCE = 0.7;
+
 class MapboxGeocoding implements GeocodingProvider {
   readonly name = "mapbox";
   constructor(private readonly token: string) {}
 
   async geocode(address: string): Promise<Coords | null> {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${this.token}&limit=1`;
+    // Biases (doesn't restrict) ambiguous/under-specified matches toward the
+    // property's own location — e.g. an address with no city/country ends up
+    // resolved nearby instead of confidently matching the wrong country on
+    // the other side of the world, which is the safer failure direction
+    // here (triggers manual review instead of a false auto-approval).
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${this.token}&limit=1&proximity=${PROPERTY_COORDS.lng},${PROPERTY_COORDS.lat}`;
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
       if (!res.ok) return null;
       const data = await res.json();
-      const center = data?.features?.[0]?.center;
+      const feature = data?.features?.[0];
+      if (!feature || typeof feature.relevance !== "number" || feature.relevance < MIN_RELEVANCE) return null;
+      const center = feature.center;
       if (!Array.isArray(center) || center.length !== 2) return null;
       const [lng, lat] = center;
       if (typeof lat !== "number" || typeof lng !== "number") return null;
