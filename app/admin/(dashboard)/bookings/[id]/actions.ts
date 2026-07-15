@@ -200,6 +200,17 @@ export async function placeDeposit(bookingId: string, customAmountPence?: number
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
+/**
+ * Host decides not to hold any deposit for this guest at all — e.g. a
+ * goodwill compromise. Prevents the automatic check-in-day and daily-retry
+ * cron from attempting a hold, since both skip any booking whose deposit
+ * status isn't NONE/DECLINED.
+ */
+export async function waiveDeposit(bookingId: string, reason?: string) {
+  await logEvent(bookingId, "DEPOSIT_WAIVED", reason || "Host chose not to hold a deposit for this booking.");
+  revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
 /** Host is happy with the property — cancels the hold, guest is never charged. */
 export async function releaseDeposit(bookingId: string) {
   const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });

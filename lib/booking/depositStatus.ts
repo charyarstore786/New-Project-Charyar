@@ -2,13 +2,14 @@
 // a dedicated column — booking.stripeDepositIntentId already tracks the
 // active intent, and the log gives a full history for free.
 
-export type DepositStatus = "NONE" | "HELD" | "DECLINED" | "RELEASED" | "CHARGED";
+export type DepositStatus = "NONE" | "HELD" | "DECLINED" | "RELEASED" | "CHARGED" | "WAIVED";
 
 const EVENT_TO_STATUS: Record<string, DepositStatus> = {
   DEPOSIT_HELD: "HELD",
   DEPOSIT_HOLD_DECLINED: "DECLINED",
   DEPOSIT_RELEASED: "RELEASED",
   DEPOSIT_CHARGED: "CHARGED",
+  DEPOSIT_WAIVED: "WAIVED",
 };
 
 export function deriveDepositStatus(events: { type: string; createdAt: Date }[]): DepositStatus {

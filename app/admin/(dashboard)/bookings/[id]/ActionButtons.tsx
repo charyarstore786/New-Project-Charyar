@@ -14,6 +14,7 @@ import {
   releaseDeposit,
   sendConfirmationEmail,
   updateBookingStatus,
+  waiveDeposit,
 } from "./actions";
 
 const NEXT_STATUS: Record<string, { value: string; label: string }[]> = {
@@ -123,7 +124,7 @@ export default function ActionButtons({
           ✉ Resend confirmation
         </button>
 
-        {(depositStatus === "NONE" || depositStatus === "DECLINED") &&
+        {(depositStatus === "NONE" || depositStatus === "DECLINED" || depositStatus === "WAIVED") &&
           ["APPROVED", "CHECKED_IN", "CHECKED_OUT"].includes(status) && (
             <button
               type="button"
@@ -134,7 +135,19 @@ export default function ActionButtons({
               }}
               className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
             >
-              🔒 {depositStatus === "DECLINED" ? "Retry deposit hold" : "Place deposit hold"}
+              🔒 {depositStatus === "DECLINED" ? "Retry deposit hold" : depositStatus === "WAIVED" ? "Place deposit hold after all" : "Place deposit hold"}
+            </button>
+          )}
+
+        {(depositStatus === "NONE" || depositStatus === "DECLINED") &&
+          ["APPROVED", "CHECKED_IN", "CHECKED_OUT"].includes(status) && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => waiveDeposit(bookingId), "Deposit waived — no hold will be attempted.")}
+              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+            >
+              🤝 Skip deposit for this guest
             </button>
           )}
 
