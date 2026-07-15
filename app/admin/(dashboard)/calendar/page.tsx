@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { toIsoDate } from "@/lib/booking/dates";
+import BlockDatesForm from "./BlockDatesForm";
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const MONTHS = [
@@ -33,7 +34,7 @@ export default async function AdminCalendarPage({
   const monthStart = new Date(Date.UTC(year, month, 1));
   const monthEnd = new Date(Date.UTC(year, month + 1, 1));
 
-  const [bookings, blocks] = await Promise.all([
+  const [bookings, blocks, manualBlocks] = await Promise.all([
     db.booking.findMany({
       where: {
         status: { in: BLOCKING_STATUSES },
@@ -45,10 +46,14 @@ export default async function AdminCalendarPage({
     db.calendarBlock.findMany({
       where: { start: { lt: monthEnd }, end: { gt: monthStart } },
     }),
+    db.calendarBlock.findMany({
+      where: { source: "manual", end: { gt: new Date() } },
+      orderBy: { start: "asc" },
+    }),
   ]);
 
   // Map each night → what's occupying it (direct booking wins display priority)
-  const nightInfo = new Map<string, { label: string; href?: string; external?: boolean }>();
+  const nightInfo = new Map<string, { label: string; href?: string; external?: boolean; manual?: boolean }>();
   for (const b of bookings) {
     for (let d = b.checkIn; d < b.checkOut; d = new Date(d.getTime() + 86_400_000)) {
       nightInfo.set(toIsoDate(d), { label: `${b.guest.name} (${b.reference})`, href: `/admin/bookings/${b.id}` });
@@ -57,7 +62,13 @@ export default async function AdminCalendarPage({
   for (const blk of blocks) {
     for (let d = blk.start; d < blk.end; d = new Date(d.getTime() + 86_400_000)) {
       const iso = toIsoDate(d);
-      if (!nightInfo.has(iso)) nightInfo.set(iso, { label: blk.summary || "External booking", external: true });
+      if (!nightInfo.has(iso)) {
+        nightInfo.set(iso, {
+          label: blk.summary || "External booking",
+          external: blk.source !== "manual",
+          manual: blk.source === "manual",
+        });
+      }
     }
   }
 
@@ -102,9 +113,11 @@ export default async function AdminCalendarPage({
             <div
               className={`flex h-20 flex-col rounded-lg border p-1.5 text-left text-xs ${
                 info
-                  ? info.external
-                    ? "border-sky-200 bg-sky-50"
-                    : "border-accent/30 bg-accent/10"
+                  ? info.manual
+                    ? "border-amber-200 bg-amber-50"
+                    : info.external
+                      ? "border-sky-200 bg-sky-50"
+                      : "border-accent/30 bg-accent/10"
                   : "border-ink/10 bg-white"
               }`}
             >
@@ -122,13 +135,27 @@ export default async function AdminCalendarPage({
         })}
       </div>
 
-      <div className="mt-4 flex gap-4 text-xs text-ink/50">
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-ink/50">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded bg-accent/20" /> Direct booking
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded bg-sky-100" /> External (Sympl)
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded bg-amber-100" /> Blocked by you
+        </span>
+      </div>
+
+      <div className="mt-8">
+        <BlockDatesForm
+          blocks={manualBlocks.map((b) => ({
+            id: b.id,
+            start: toIsoDate(b.start),
+            end: toIsoDate(b.end),
+            summary: b.summary,
+          }))}
+        />
       </div>
     </div>
   );
