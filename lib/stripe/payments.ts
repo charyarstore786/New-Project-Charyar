@@ -53,6 +53,59 @@ export function getPaymentProvider(): PaymentProvider {
   return process.env.STRIPE_SECRET_KEY ? new StripePayments() : new MockPayments();
 }
 
+export type ChargeSavedCardResult =
+  | { status: "charged"; paymentIntentId: string }
+  | { status: "failed"; error: string };
+
+/**
+ * Immediate off-session charge for the stay total, using the card saved via
+ * a SetupIntent (host-initiated, e.g. for a manually-entered booking that
+ * skipped the online authorize-then-capture flow). Unlike
+ * authorizeStayPayment this captures right away — there's no separate host
+ * approval step for a booking the host already created themselves.
+ */
+export async function chargeSavedCard(input: {
+  customerId: string;
+  setupIntentId: string;
+  amountPence: number;
+  bookingReference: string;
+}): Promise<ChargeSavedCardResult> {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return { status: "charged", paymentIntentId: mockId("pi") };
+  }
+
+  const stripe = getStripe();
+  let paymentMethodId: string | undefined;
+  try {
+    const setupIntent = await stripe.setupIntents.retrieve(input.setupIntentId);
+    paymentMethodId =
+      typeof setupIntent.payment_method === "string" ? setupIntent.payment_method : setupIntent.payment_method?.id;
+  } catch (err) {
+    return { status: "failed", error: err instanceof Error ? err.message : "Could not look up the saved card." };
+  }
+  if (!paymentMethodId) return { status: "failed", error: "No saved payment method found on the booking." };
+
+  try {
+    const intent = await stripe.paymentIntents.create({
+      amount: input.amountPence,
+      currency: "gbp",
+      customer: input.customerId,
+      payment_method: paymentMethodId,
+      payment_method_types: ["card"],
+      capture_method: "automatic",
+      confirm: true,
+      off_session: true,
+      metadata: { bookingReference: input.bookingReference, purpose: "stay_total" },
+    });
+    if (intent.status === "succeeded") {
+      return { status: "charged", paymentIntentId: intent.id };
+    }
+    return { status: "failed", error: `Unexpected charge status: ${intent.status}` };
+  } catch (err) {
+    return { status: "failed", error: err instanceof Error ? err.message : "Card was declined" };
+  }
+}
+
 /** Mock customer id generator, shared with the /api/stripe routes below. */
 function mockId(prefix: string): string {
   return `mock_${prefix}_${crypto.randomBytes(8).toString("hex")}`;

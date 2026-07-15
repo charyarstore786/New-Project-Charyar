@@ -6,6 +6,7 @@ import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import { getPricing } from "@/lib/pricing";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ActionButtons from "./ActionButtons";
+import CardSection from "./CardSection";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -102,6 +103,15 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             <Row label="Deposit intent" value={<code className="text-xs">{booking.stripeDepositIntentId || "—"}</code>} />
           </div>
         </section>
+
+        <CardSection
+          bookingId={booking.id}
+          guestName={booking.guest.name}
+          guestEmail={booking.guest.email}
+          total={booking.total}
+          hasCard={!!booking.stripeCustomerId && !!booking.stripeSetupIntentId}
+          alreadyCharged={!!booking.stripePaymentIntentId}
+        />
 
         <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
           <h2 className="font-display text-lg font-semibold">Damage claims</h2>

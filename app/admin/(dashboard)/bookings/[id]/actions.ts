@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getPaymentProvider } from "@/lib/stripe/payments";
+import { chargeSavedCard, getPaymentProvider } from "@/lib/stripe/payments";
 import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getEmailProvider } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
@@ -106,6 +106,46 @@ export async function sendConfirmationEmail(bookingId: string) {
     }),
   });
 
+  revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+/** Saves a card on file for a booking that didn't collect one online (e.g. a manual booking). */
+export async function attachCard(bookingId: string, customerId: string, setupIntentId: string) {
+  await db.booking.update({
+    where: { id: bookingId },
+    data: { stripeCustomerId: customerId, stripeSetupIntentId: setupIntentId },
+  });
+  await logEvent(bookingId, "CARD_ADDED", "Card on file added by host.");
+  revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+/** Host-initiated, on-demand charge of the full stay total against the saved card — entirely optional. */
+export async function chargeStayTotal(bookingId: string) {
+  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+  if (!booking.stripeCustomerId || !booking.stripeSetupIntentId) {
+    await logEvent(bookingId, "CHARGE_DECLINED", "No saved card on this booking.");
+    revalidatePath(`/admin/bookings/${bookingId}`);
+    return;
+  }
+  if (booking.stripePaymentIntentId) {
+    await logEvent(bookingId, "CHARGE_DECLINED", "This booking already has a payment on file.");
+    revalidatePath(`/admin/bookings/${bookingId}`);
+    return;
+  }
+
+  const result = await chargeSavedCard({
+    customerId: booking.stripeCustomerId,
+    setupIntentId: booking.stripeSetupIntentId,
+    amountPence: booking.total,
+    bookingReference: booking.reference,
+  });
+
+  if (result.status === "charged") {
+    await db.booking.update({ where: { id: bookingId }, data: { stripePaymentIntentId: result.paymentIntentId } });
+    await logEvent(bookingId, "STAY_CHARGED", `£${(booking.total / 100).toFixed(2)} charged (intent ${result.paymentIntentId}).`);
+  } else {
+    await logEvent(bookingId, "CHARGE_DECLINED", result.error);
+  }
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
