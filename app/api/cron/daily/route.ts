@@ -5,6 +5,7 @@ import {
   autoReleaseDeposits,
   placeDepositsForCheckIns,
   purgeOldGuestIdData,
+  retryDeclinedDeposits,
   sendCheckInInstructions,
   sendCheckOutInstructions,
 } from "@/lib/cron/dailyTasks";
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
 
   const results = {
     deposits: await placeDepositsForCheckIns(),
+    depositRetries: await retryDeclinedDeposits(),
     depositAutoRelease: await autoReleaseDeposits(),
     checkInEmails: await sendCheckInInstructions(),
     checkOutEmails: await sendCheckOutInstructions(),

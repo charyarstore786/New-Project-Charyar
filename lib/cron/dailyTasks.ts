@@ -37,6 +37,52 @@ async function logEvent(bookingId: string, type: string, detail?: string) {
 
 type TaskSummary = { processed: number; errors: string[] };
 
+/**
+ * Attempts one deposit hold and handles the result — held (saves the intent
+ * id) or declined (logs it and emails the guest asking for a working card).
+ * Shared by the check-in-day attempt and the daily retry, so a guest who
+ * tops up their card gets picked up the same way either time.
+ */
+async function attemptDepositHold(
+  booking: {
+    id: string;
+    reference: string;
+    stripeCustomerId: string;
+    stripeSetupIntentId: string;
+    guest: { name: string; email: string };
+  },
+  depositAmount: number,
+  attemptLabel: string,
+): Promise<void> {
+  const result = await getDepositProvider().placeDepositHold({
+    customerId: booking.stripeCustomerId,
+    setupIntentId: booking.stripeSetupIntentId,
+    amountPence: depositAmount * 100,
+    bookingReference: booking.reference,
+  });
+
+  if (result.status === "held" || result.status === "requires_action") {
+    await db.booking.update({ where: { id: booking.id }, data: { stripeDepositIntentId: result.depositIntentId } });
+    await logEvent(booking.id, "DEPOSIT_HELD", `£${depositAmount} hold placed (intent ${result.depositIntentId}) via ${attemptLabel}.`);
+    return;
+  }
+
+  await logEvent(booking.id, "DEPOSIT_HOLD_DECLINED", `${result.error} (${attemptLabel}).`);
+  const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+  const subject = depositDeclinedEmailSubject();
+  const body = depositDeclinedEmailText({ firstName, deposit: depositAmount });
+  try {
+    await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+    await db.emailLog.upsert({
+      where: { bookingId_type: { bookingId: booking.id, type: "DEPOSIT_DECLINED" } },
+      create: { bookingId: booking.id, type: "DEPOSIT_DECLINED", to: booking.guest.email, subject, body },
+      update: { subject, body, sentAt: new Date() },
+    });
+  } catch (emailErr) {
+    await logEvent(booking.id, "EMAIL_SEND_FAILED", `DEPOSIT_DECLINED: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`);
+  }
+}
+
 /** Places the £200 deposit hold for bookings checking in today. */
 export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
   const today = startOfUtcDay(new Date());
@@ -59,32 +105,70 @@ export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
         continue;
       }
 
-      const result = await getDepositProvider().placeDepositHold({
-        customerId: booking.stripeCustomerId,
-        setupIntentId: booking.stripeSetupIntentId,
-        amountPence: pricing.deposit * 100,
-        bookingReference: booking.reference,
-      });
+      await attemptDepositHold(
+        {
+          id: booking.id,
+          reference: booking.reference,
+          stripeCustomerId: booking.stripeCustomerId,
+          stripeSetupIntentId: booking.stripeSetupIntentId,
+          guest: booking.guest,
+        },
+        pricing.deposit,
+        "check-in cron",
+      );
+      summary.processed++;
+    } catch (err) {
+      summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
-      if (result.status === "held" || result.status === "requires_action") {
-        await db.booking.update({ where: { id: booking.id }, data: { stripeDepositIntentId: result.depositIntentId } });
-        await logEvent(booking.id, "DEPOSIT_HELD", `£${pricing.deposit} hold placed (intent ${result.depositIntentId}) via cron.`);
-      } else {
-        await logEvent(booking.id, "DEPOSIT_HOLD_DECLINED", `${result.error} (cron attempt — host should retry manually).`);
-        const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
-        const subject = depositDeclinedEmailSubject();
-        const body = depositDeclinedEmailText({ firstName, deposit: pricing.deposit });
-        try {
-          await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
-          await db.emailLog.upsert({
-            where: { bookingId_type: { bookingId: booking.id, type: "DEPOSIT_DECLINED" } },
-            create: { bookingId: booking.id, type: "DEPOSIT_DECLINED", to: booking.guest.email, subject, body },
-            update: { subject, body, sentAt: new Date() },
-          });
-        } catch (emailErr) {
-          await logEvent(booking.id, "EMAIL_SEND_FAILED", `DEPOSIT_DECLINED: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`);
-        }
-      }
+  return summary;
+}
+
+/**
+ * Retries a previously-declined deposit hold once a day for any booking
+ * still ongoing (not yet checked out) — e.g. the guest topped up their card
+ * or added a new one after the first attempt failed. Skips bookings already
+ * attempted today so it never doubles up with placeDepositsForCheckIns on a
+ * check-in day.
+ */
+export async function retryDeclinedDeposits(): Promise<TaskSummary> {
+  const today = startOfUtcDay(new Date());
+  const summary: TaskSummary = { processed: 0, errors: [] };
+
+  const candidates = await db.booking.findMany({
+    where: {
+      status: { in: ["APPROVED", "CHECKED_IN"] },
+      checkOut: { gt: today },
+      stripeCustomerId: { not: null },
+      stripeSetupIntentId: { not: null },
+    },
+    include: { guest: true },
+  });
+  if (candidates.length === 0) return summary;
+  const { deposit } = await getPricing();
+
+  for (const booking of candidates) {
+    try {
+      const events = await db.eventLog.findMany({ where: { bookingId: booking.id } });
+      if (deriveDepositStatus(events) !== "DECLINED") continue;
+
+      const alreadyAttemptedToday = events.some(
+        (e) => (e.type === "DEPOSIT_HELD" || e.type === "DEPOSIT_HOLD_DECLINED") && e.createdAt >= today,
+      );
+      if (alreadyAttemptedToday) continue;
+
+      await attemptDepositHold(
+        {
+          id: booking.id,
+          reference: booking.reference,
+          stripeCustomerId: booking.stripeCustomerId!,
+          stripeSetupIntentId: booking.stripeSetupIntentId!,
+          guest: booking.guest,
+        },
+        deposit,
+        "daily retry",
+      );
       summary.processed++;
     } catch (err) {
       summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);
