@@ -36,6 +36,29 @@ export default async function AdminOverviewPage() {
         <StatCard label="Occupancy (next 30 days)" value={`${stats.occupancyNext30}%`} />
       </div>
 
+      {stats.declinedDeposits.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-semibold text-red-700">Deposit holds need attention</h2>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-red-200 bg-red-50 shadow-sm">
+            {stats.declinedDeposits.map((b) => (
+              <Link
+                key={b.id}
+                href={`/admin/bookings/${b.id}`}
+                className="flex items-center justify-between gap-4 border-b border-red-100 px-5 py-4 last:border-0 hover:bg-red-100/50"
+              >
+                <div>
+                  <p className="font-medium">{b.guest.name}</p>
+                  <p className="text-sm text-ink/50">
+                    {b.reference} · {b.checkIn.toISOString().slice(0, 10)} → {b.checkOut.toISOString().slice(0, 10)}
+                  </p>
+                </div>
+                <p className="text-sm font-medium text-red-700">Deposit hold declined</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {stats.pendingApproval.length > 0 && (
         <section className="mt-8">
           <h2 className="font-display text-lg font-semibold">Needs your approval</h2>

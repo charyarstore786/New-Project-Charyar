@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { todayUtc, addDays } from "@/lib/booking/dates";
+import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 
 /** Statuses that represent a confirmed, revenue-generating stay. */
 const CONFIRMED_STATUSES = ["APPROVED", "CHECKED_IN", "CHECKED_OUT", "CLOSED"];
@@ -17,6 +18,7 @@ export async function getDashboardStats() {
     revenueThisMonth,
     nightsBookedNext30,
     recentBookings,
+    activeBookingsForDeposit,
   ] = await Promise.all([
     db.booking.findMany({
       where: { status: "PENDING_APPROVAL" },
@@ -46,7 +48,30 @@ export async function getDashboardStats() {
       orderBy: { createdAt: "desc" },
       include: { guest: true },
     }),
+    db.booking.findMany({
+      where: { status: { in: ["APPROVED", "CHECKED_IN"] } },
+      include: { guest: true },
+    }),
   ]);
+
+  // Deposit status isn't a column — derive it per booking from its event log,
+  // same as the individual booking detail page, so a declined hold (e.g. card
+  // had insufficient funds) surfaces here instead of only being visible if the
+  // host happens to open that specific booking.
+  const depositEvents = await db.eventLog.findMany({
+    where: { bookingId: { in: activeBookingsForDeposit.map((b) => b.id) } },
+    orderBy: { createdAt: "desc" },
+  });
+  const eventsByBooking = new Map<string, typeof depositEvents>();
+  for (const e of depositEvents) {
+    if (!e.bookingId) continue;
+    const arr = eventsByBooking.get(e.bookingId) ?? [];
+    arr.push(e);
+    eventsByBooking.set(e.bookingId, arr);
+  }
+  const declinedDeposits = activeBookingsForDeposit.filter(
+    (b) => deriveDepositStatus(eventsByBooking.get(b.id) ?? []) === "DECLINED",
+  );
 
   let bookedNights = 0;
   for (const b of nightsBookedNext30) {
@@ -62,5 +87,6 @@ export async function getDashboardStats() {
     revenueThisMonthPence: revenueThisMonth._sum.total ?? 0,
     occupancyNext30,
     recentBookings,
+    declinedDeposits,
   };
 }

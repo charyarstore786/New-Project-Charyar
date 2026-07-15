@@ -13,6 +13,7 @@ import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import { checkInInstructionsSubject, checkInInstructionsText } from "@/lib/email/templates/checkInInstructions";
 import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/email/templates/checkOutInstructions";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
+import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
 
 const AUTO_RELEASE_AFTER_CHECKOUT_DAYS = 6;
 const AUTO_CANCEL_AFTER_PENDING_DAYS = 6;
@@ -44,6 +45,7 @@ export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
 
   const candidates = await db.booking.findMany({
     where: { status: { in: ["APPROVED", "CHECKED_IN"] }, checkIn: { gte: today, lt: tomorrow } },
+    include: { guest: true },
   });
   if (candidates.length === 0) return summary;
   const pricing = await getPricing();
@@ -69,6 +71,19 @@ export async function placeDepositsForCheckIns(): Promise<TaskSummary> {
         await logEvent(booking.id, "DEPOSIT_HELD", `£${pricing.deposit} hold placed (intent ${result.depositIntentId}) via cron.`);
       } else {
         await logEvent(booking.id, "DEPOSIT_HOLD_DECLINED", `${result.error} (cron attempt — host should retry manually).`);
+        const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+        const subject = depositDeclinedEmailSubject();
+        const body = depositDeclinedEmailText({ firstName, deposit: pricing.deposit });
+        try {
+          await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+          await db.emailLog.upsert({
+            where: { bookingId_type: { bookingId: booking.id, type: "DEPOSIT_DECLINED" } },
+            create: { bookingId: booking.id, type: "DEPOSIT_DECLINED", to: booking.guest.email, subject, body },
+            update: { subject, body, sentAt: new Date() },
+          });
+        } catch (emailErr) {
+          await logEvent(booking.id, "EMAIL_SEND_FAILED", `DEPOSIT_DECLINED: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`);
+        }
       }
       summary.processed++;
     } catch (err) {

@@ -7,6 +7,7 @@ import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getEmailProvider } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
+import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
 import { getPricing } from "@/lib/pricing";
 
 function formatDisplayDate(iso: Date): string {
@@ -151,7 +152,7 @@ export async function chargeStayTotal(bookingId: string) {
 
 /** Places the £200 off-session hold on the card saved at booking time. */
 export async function placeDeposit(bookingId: string) {
-  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { guest: true } });
   if (!booking.stripeCustomerId || !booking.stripeSetupIntentId) {
     await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", "No saved card on this booking.");
     revalidatePath(`/admin/bookings/${bookingId}`);
@@ -177,6 +178,14 @@ export async function placeDeposit(bookingId: string) {
     );
   } else {
     await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", result.error);
+    const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+    await sendEmailSafely({
+      bookingId,
+      to: booking.guest.email,
+      type: "DEPOSIT_DECLINED",
+      subject: depositDeclinedEmailSubject(),
+      body: depositDeclinedEmailText({ firstName, deposit }),
+    });
   }
 
   revalidatePath(`/admin/bookings/${bookingId}`);
