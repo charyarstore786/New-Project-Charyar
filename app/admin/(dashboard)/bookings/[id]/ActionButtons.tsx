@@ -6,7 +6,9 @@ import type { DepositStatus } from "@/lib/booking/depositStatus";
 import {
   addDamageClaim,
   approveBooking,
+  cancelBooking,
   chargeDeposit,
+  deleteBooking,
   placeDeposit,
   rejectBooking,
   releaseDeposit,
@@ -20,13 +22,18 @@ const NEXT_STATUS: Record<string, { value: string; label: string }[]> = {
   CHECKED_OUT: [{ value: "CLOSED", label: "Close booking" }],
 };
 
+const TERMINAL_STATUSES = ["CANCELLED", "REJECTED", "CLOSED"];
+const PRE_APPROVAL_STATUSES = ["PENDING_VERIFICATION", "PENDING_APPROVAL"];
+
 export default function ActionButtons({
   bookingId,
+  reference,
   status,
   depositStatus,
   depositAmount,
 }: {
   bookingId: string;
+  reference: string;
   status: string;
   depositStatus: DepositStatus;
   depositAmount: number;
@@ -34,14 +41,30 @@ export default function ActionButtons({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [showChargeForm, setShowChargeForm] = useState(false);
+  const [showDeleteForm, setShowDeleteForm] = useState(false);
   const [reason, setReason] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [claimAmount, setClaimAmount] = useState("");
   const [claimNote, setClaimNote] = useState("");
   const [chargeAmount, setChargeAmount] = useState("");
   const [chargeNote, setChargeNote] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  function onDelete() {
+    startTransition(async () => {
+      const result = await deleteBooking(bookingId);
+      if (result.ok) {
+        router.push("/admin/bookings");
+      } else {
+        setDeleteError(result.error);
+      }
+    });
+  }
 
   function run(action: () => Promise<void>, ok: string) {
     startTransition(async () => {
@@ -139,6 +162,17 @@ export default function ActionButtons({
         >
           🧾 Add damage claim
         </button>
+
+        {!TERMINAL_STATUSES.includes(status) && !PRE_APPROVAL_STATUSES.includes(status) && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setShowCancelForm((v) => !v)}
+            className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            ✕ Cancel booking
+          </button>
+        )}
       </div>
 
       {showChargeForm && (
@@ -254,6 +288,88 @@ export default function ActionButtons({
           </button>
         </div>
       )}
+
+      {showCancelForm && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-900">
+            Marks the booking cancelled and releases any uncaptured authorization or deposit hold. If the stay total
+            was already captured, that's a real charge you'll need to refund manually via Stripe — this doesn't do
+            that automatically.
+          </p>
+          <label className="mt-3 block text-sm font-medium text-red-900">
+            Reason (optional, kept as an internal note)
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={2}
+              className="mt-1 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-400"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              run(() => cancelBooking(bookingId, cancelReason), "Booking cancelled.");
+              setShowCancelForm(false);
+            }}
+            className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            Confirm cancel
+          </button>
+        </div>
+      )}
+
+      <div className="mt-8 rounded-xl border border-red-200 bg-red-50/50 p-4">
+        <p className="text-sm font-semibold text-red-900">Danger zone</p>
+        <p className="mt-1 text-sm text-red-800">
+          Permanently deletes this booking and its guest, emails, damage claims and activity log. This cannot be
+          undone — it does not cancel any Stripe authorization or release a deposit hold first.
+        </p>
+        {!showDeleteForm ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setShowDeleteForm(true)}
+            className="mt-3 rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            🗑 Delete booking
+          </button>
+        ) : (
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-red-900">
+              Type <span className="font-mono">{reference}</span> to confirm
+              <input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="mt-1 w-full max-w-xs rounded-lg border border-red-300 bg-white px-3 py-2 text-sm outline-none focus:border-red-500"
+              />
+            </label>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={pending || deleteConfirmText !== reference}
+                onClick={onDelete}
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {pending ? "Deleting…" : "Delete permanently"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setShowDeleteForm(false);
+                  setDeleteConfirmText("");
+                  setDeleteError(null);
+                }}
+                className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+            {deleteError && <p className="mt-2 text-sm font-medium text-red-700">{deleteError}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

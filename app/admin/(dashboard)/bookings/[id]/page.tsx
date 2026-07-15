@@ -63,7 +63,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-6">
-        <ActionButtons bookingId={booking.id} status={booking.status} depositStatus={depositStatus} depositAmount={depositAmount} />
+        <ActionButtons
+          bookingId={booking.id}
+          reference={booking.reference}
+          status={booking.status}
+          depositStatus={depositStatus}
+          depositAmount={depositAmount}
+        />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

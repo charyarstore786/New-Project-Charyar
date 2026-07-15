@@ -215,6 +215,62 @@ export async function addDamageClaim(bookingId: string, amountPence: number, not
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
+const TERMINAL_STATUSES = ["CANCELLED", "REJECTED", "CLOSED"];
+
+/**
+ * Host-initiated cancellation of an already-approved (or later-stage)
+ * booking — distinct from "Reject", which only applies before approval.
+ * Releases whatever's still just authorized/held (not already captured or
+ * charged); if the stay total was already captured, that's a real charge
+ * the host needs to refund manually via Stripe — this doesn't attempt that.
+ */
+export async function cancelBooking(bookingId: string, reason?: string) {
+  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+  if (TERMINAL_STATUSES.includes(booking.status)) return;
+
+  if (booking.stripePaymentIntentId && booking.status === "PENDING_APPROVAL") {
+    await getPaymentProvider().releaseStayPayment(booking.stripePaymentIntentId);
+  }
+  if (booking.stripeDepositIntentId) {
+    try {
+      await getDepositProvider().releaseDepositHold(booking.stripeDepositIntentId);
+    } catch (err) {
+      await logEvent(bookingId, "DEPOSIT_HOLD_DECLINED", `Release on cancel failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  await db.booking.update({
+    where: { id: bookingId },
+    data: { status: "CANCELLED", notes: reason || booking.notes },
+  });
+  await logEvent(bookingId, "BOOKING_CANCELLED", reason || "Cancelled by host.");
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/book");
+}
+
+/** Permanently removes a booking and its related records — irreversible. */
+export async function deleteBooking(bookingId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const booking = await db.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) return { ok: false, error: "Booking not found." };
+
+  await db.$transaction([
+    db.eventLog.deleteMany({ where: { bookingId } }),
+    db.emailLog.deleteMany({ where: { bookingId } }),
+    db.damageClaim.deleteMany({ where: { bookingId } }),
+    db.booking.delete({ where: { id: bookingId } }),
+  ]);
+
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/book");
+  return { ok: true };
+}
+
 export async function updateBookingStatus(bookingId: string, status: string) {
   await db.booking.update({ where: { id: bookingId }, data: { status } });
   await logEvent(bookingId, "STATUS_CHANGED", `Manually set to ${status}`);
