@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Gallery from "@/components/Gallery";
+import HomeAvailability from "@/components/HomeAvailability";
 import { photos } from "@/lib/site";
 import { getPricing } from "@/lib/pricing";
 
@@ -186,6 +187,25 @@ export default async function Home() {
               height={450}
               className="mt-8 rounded-2xl object-cover"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Availability */}
+      <section id="availability" className="scroll-mt-20 bg-white py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <span className="btn-blue px-4 py-1.5 text-xs uppercase tracking-[0.2em]">
+            Availability
+          </span>
+          <h2 className="title-blue mt-4 font-display text-3xl font-semibold sm:text-4xl">
+            Check your dates
+          </h2>
+          <p className="mt-4 max-w-xl text-ink/70">
+            Live availability, synced with Airbnb, Booking.com and Vrbo. Pick
+            your dates below to see pricing and start your booking.
+          </p>
+          <div className="mt-10">
+            <HomeAvailability />
           </div>
         </div>
       </section>

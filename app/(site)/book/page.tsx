@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import BookingWizard from "@/components/booking/BookingWizard";
 import { site } from "@/lib/site";
 import { getPricing } from "@/lib/pricing";
@@ -27,7 +28,9 @@ export default async function BookPage() {
       </p>
 
       <div className="mt-10">
-        <BookingWizard />
+        <Suspense fallback={<div className="rounded-2xl border border-ink/10 bg-white p-8 text-center text-ink/50">Loading…</div>}>
+          <BookingWizard />
+        </Suspense>
       </div>
 
       <p className="mt-10 text-sm text-ink/60">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Calendar from "./Calendar";
 import StripePaymentForm from "./StripePaymentForm";
 import { formatGbp, type Quote } from "@/lib/booking/format";
@@ -30,13 +31,22 @@ const STEPS: { id: StepId; label: string }[] = [
 const EMAIL_RE = /^[^\s@]{1,64}@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
 const PHONE_RE = /^\+?[\d\s().-]{7,20}$/;
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export default function BookingWizard() {
+  const searchParams = useSearchParams();
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const [step, setStep] = useState<StepId>("dates");
-  const [checkIn, setCheckIn] = useState<string | null>(null);
-  const [checkOut, setCheckOut] = useState<string | null>(null);
+  const initialCheckIn = searchParams.get("checkIn");
+  const initialCheckOut = searchParams.get("checkOut");
+  const [checkIn, setCheckIn] = useState<string | null>(
+    initialCheckIn && ISO_DATE_RE.test(initialCheckIn) ? initialCheckIn : null
+  );
+  const [checkOut, setCheckOut] = useState<string | null>(
+    initialCheckOut && ISO_DATE_RE.test(initialCheckOut) ? initialCheckOut : null
+  );
   const [guests, setGuests] = useState(2);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [details, setDetails] = useState({ name: "", email: "", phone: "", country: "" });

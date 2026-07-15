@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createDeal, deleteDeal, toggleDealActive, type DealType } from "./actions";
+import { createDeal, deleteDeal, toggleDealActive, updateDeal, type DealType } from "./actions";
 
 export type DealRow = {
   id: string;
@@ -32,18 +32,40 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  function onCreate(e: React.FormEvent) {
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setStartDate(today());
+    setEndDate(today());
+    setType("PERCENTAGE_OFF");
+    setValue("");
+  }
+
+  function onEdit(d: DealRow) {
+    setError(null);
+    setMessage(null);
+    setEditingId(d.id);
+    setName(d.name);
+    setStartDate(d.startDate);
+    setEndDate(d.endDate);
+    setType(d.type);
+    setValue(d.type === "FIXED_RATE" ? String(d.value / 100) : String(d.value));
+  }
+
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setMessage(null);
     const numValue = Number(value);
     startTransition(async () => {
-      const result = await createDeal({ name, startDate, endDate, type, value: numValue });
+      const result = editingId
+        ? await updateDeal(editingId, { name, startDate, endDate, type, value: numValue })
+        : await createDeal({ name, startDate, endDate, type, value: numValue });
       if (result.ok) {
-        setMessage("Deal created.");
-        setName("");
-        setValue("");
+        setMessage(editingId ? "Deal updated." : "Deal created.");
+        resetForm();
         router.refresh();
       } else {
         setError(result.error);
@@ -69,8 +91,8 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={onCreate} className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
-        <h2 className="font-display text-lg font-semibold">New deal</h2>
+      <form onSubmit={onSubmit} className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+        <h2 className="font-display text-lg font-semibold">{editingId ? "Edit deal" : "New deal"}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className="text-sm font-medium">Name</span>
@@ -124,8 +146,18 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
         </div>
         <div className="mt-4 flex items-center gap-3">
           <button type="submit" disabled={pending} className="btn-fancy px-6 py-2.5 text-sm disabled:opacity-50">
-            {pending ? "Saving…" : "Create deal"}
+            {pending ? "Saving…" : editingId ? "Save changes" : "Create deal"}
           </button>
+          {editingId && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={resetForm}
+              className="rounded-lg border border-ink/15 px-4 py-2.5 text-sm font-medium text-ink/70 hover:bg-ink/5 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          )}
           {message && <p className="text-sm font-medium text-emerald-700">{message}</p>}
           {error && <p className="text-sm font-medium text-red-700">{error}</p>}
         </div>
@@ -152,6 +184,13 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      disabled={pending}
+                      onClick={() => onEdit(d)}
+                      className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-ink/5 disabled:opacity-50"
+                    >
+                      Edit
+                    </button>
                     <button
                       disabled={pending}
                       onClick={() => onToggle(d.id, !d.active)}
