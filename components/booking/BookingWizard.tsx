@@ -49,7 +49,7 @@ export default function BookingWizard() {
   );
   const [guests, setGuests] = useState(2);
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [details, setDetails] = useState({ name: "", email: "", phone: "", country: "" });
+  const [details, setDetails] = useState({ name: "", email: "", phone: "", country: "", address: "" });
   const [verified, setVerified] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -109,6 +109,7 @@ export default function BookingWizard() {
     if (details.name.trim().length < 2) return setError("Please enter your full name.");
     if (!EMAIL_RE.test(details.email.trim())) return setError("Please enter a valid email address.");
     if (!PHONE_RE.test(details.phone.trim())) return setError("Please enter a valid phone number.");
+    if (details.address.trim().length < 5) return setError("Please enter your home address.");
     setStep("verify");
   }
 
@@ -229,6 +230,7 @@ export default function BookingWizard() {
             email: details.email.trim(),
             phone: details.phone.trim(),
             country: details.country.trim() || undefined,
+            address: details.address.trim(),
           },
           stripe: { customerId, setupIntentId, paymentIntentId, verificationSessionId },
         }),
@@ -261,6 +263,7 @@ export default function BookingWizard() {
             email: details.email.trim(),
             phone: details.phone.trim(),
             country: details.country.trim() || undefined,
+            address: details.address.trim(),
           },
           stripe: {
             customerId: customerId ?? "mock_customer",
@@ -459,10 +462,11 @@ export default function BookingWizard() {
                   ["name", "Full name", "text", "Jane Smith", true],
                   ["email", "Email", "email", "jane@example.com", true],
                   ["phone", "Phone", "tel", "+44 7700 900123", true],
+                  ["address", "Home address", "text", "123 Main St, City, Postcode", true],
                   ["country", "Country (optional)", "text", "United Kingdom", false],
                 ] as const
               ).map(([key, label, type, placeholder, required]) => (
-                <div key={key} className={key === "name" ? "sm:col-span-2" : ""}>
+                <div key={key} className={key === "name" || key === "address" ? "sm:col-span-2" : ""}>
                   <label htmlFor={key} className="text-sm font-medium">
                     {label}
                   </label>
@@ -470,7 +474,7 @@ export default function BookingWizard() {
                     id={key}
                     type={type}
                     required={required}
-                    maxLength={120}
+                    maxLength={key === "address" ? 200 : 120}
                     placeholder={placeholder}
                     value={details[key]}
                     onChange={(e) => setDetails((d) => ({ ...d, [key]: e.target.value }))}

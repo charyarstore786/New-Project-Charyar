@@ -14,7 +14,10 @@ export const site = {
   maxNights: 28,
   checkIn: "4:00 PM",
   checkOut: "10:00 AM",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // NEXT_PUBLIC_SITE_URL isn't set in Vercel, so this fallback is what's
+  // actually live in production too — keep it pointed at the real domain,
+  // not localhost (see /admin/sync for the same issue on the iCal feed URL).
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://shortstaynewport.co.uk",
   address: {
     locality: "Newport",
     region: "Wales",

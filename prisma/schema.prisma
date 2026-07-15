@@ -19,6 +19,10 @@ model Guest {
   email              String
   phone              String
   country            String?
+  // Full home address as typed by the guest (online bookings only) — used
+  // once, at booking time, to geocode a distance from the property and
+  // decide auto- vs manual-approval (see lib/geo.ts). Never shown to anyone.
+  address            String?
   // UNVERIFIED | PENDING | VERIFIED | FAILED
   verificationStatus String    @default("UNVERIFIED")
   // Minimal summary extracted from the ID check (JSON: docType, docNumber

@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
   const email = clean(guest.email, 120);
   const phone = clean(guest.phone, 20);
   const country = clean(guest.country, 56) ?? undefined;
+  const address = clean(guest.address, 200);
 
   if (!name || name.length < 2) {
     return NextResponse.json({ error: "Please enter your full name." }, { status: 422 });
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
   }
   if (!phone || !PHONE_RE.test(phone)) {
     return NextResponse.json({ error: "Please enter a valid phone number." }, { status: 422 });
+  }
+  if (!address || address.length < 5) {
+    return NextResponse.json({ error: "Please enter your home address." }, { status: 422 });
   }
 
   const stripe = (body.stripe ?? {}) as Record<string, unknown>;
@@ -71,7 +75,7 @@ export async function POST(req: NextRequest) {
     checkIn: body.checkIn,
     checkOut: body.checkOut,
     guests: body.guests,
-    guest: { name, email, phone, country },
+    guest: { name, email, phone, country, address },
     stripe: { customerId, setupIntentId, paymentIntentId, verificationSessionId },
   });
 

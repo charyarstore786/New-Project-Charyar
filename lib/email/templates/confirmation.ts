@@ -71,7 +71,7 @@ Check-In & Check-Out
 
 Damage Deposit Policy
 - A damage deposit may be required prior to arrival. For last-minute bookings, this may be requested via bank transfer.
-- Deposits are refunded within 48 hours of departure, pending inspection.
+- Deposits are refunded within 24 hours of departure, pending inspection.
 
 Safety & Compliance
 - Do not tamper with smoke detectors or safety equipment.

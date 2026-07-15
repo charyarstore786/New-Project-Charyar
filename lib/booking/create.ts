@@ -1,6 +1,14 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { getVerificationStatus, getVerificationSummary } from "@/lib/stripe/identity";
+import { getPaymentProvider } from "@/lib/stripe/payments";
+import { getEmailProvider } from "@/lib/email/send";
+import { getGeocodingProvider, milesFromProperty, APPROVAL_RADIUS_MILES } from "@/lib/geo";
+import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
+import { hostBookingNeedsApprovalSubject, hostBookingNeedsApprovalText } from "@/lib/email/templates/hostBookingNeedsApproval";
+import { hostBookingAutoApprovedSubject, hostBookingAutoApprovedText } from "@/lib/email/templates/hostBookingAutoApproved";
+import { formatGbp } from "./format";
+import { site } from "@/lib/site";
 import { isRangeAvailable, syncExternalBlocks } from "./availability";
 import { computeQuote, validateStay } from "./quote";
 
@@ -9,7 +17,22 @@ export type GuestDetails = {
   email: string;
   phone: string;
   country?: string;
+  /** Full address as typed by the guest — used once to geocode a distance from the property (see lib/geo.ts). */
+  address: string;
 };
+
+function formatDisplayDate(iso: Date): string {
+  return iso.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** Never lets a notification-email failure break booking creation — logged, not thrown. */
+async function notifyHostSafely(subject: string, body: string) {
+  try {
+    await getEmailProvider().send({ to: site.email, subject, text: body });
+  } catch (err) {
+    console.error("Host notification email failed:", err);
+  }
+}
 
 /** IDs from the client-driven Stripe.js steps that ran before this call
  * (see /api/stripe/customer, /identity-session, /setup-intent, /payment-intent). */
@@ -40,9 +63,13 @@ export function newReference(): string {
  * Finalizes a booking after the guest has already completed ID verification
  * and card authorization client-side via Stripe.js (see BookingWizard.tsx).
  * This re-checks availability and the verification result server-side, then
- * transactionally persists the booking. Lands in PENDING_APPROVAL, which
- * blocks its dates immediately (site calendar + exported iCal feed) until
- * the host approves or rejects.
+ * transactionally persists the booking. Either way, it blocks its dates
+ * immediately (site calendar + exported iCal feed):
+ * - Guest beyond APPROVAL_RADIUS_MILES of the property (or an address we
+ *   couldn't geocode) → auto-approved, payment captured immediately, same as
+ *   the host clicking Approve themselves.
+ * - Guest within the radius → PENDING_APPROVAL as before, waiting on the
+ *   host to approve or reject.
  */
 export async function createBooking(input: {
   checkIn: unknown;
@@ -88,6 +115,14 @@ export async function createBooking(input: {
   }
   const idSummary = await getVerificationSummary(input.stripe.verificationSessionId, input.guest.name);
 
+  // Distance-based auto-approval, resolved once before the transaction so
+  // the initial status is right from the start. An address that can't be
+  // geocoded defaults to auto-approve (assumed far away) rather than
+  // blocking the booking.
+  const geocoded = await getGeocodingProvider().geocode(input.guest.address);
+  const distanceMiles = geocoded ? Math.round(milesFromProperty(geocoded) * 10) / 10 : null;
+  const autoApprove = distanceMiles === null || distanceMiles > APPROVAL_RADIUS_MILES;
+
   const reference = newReference();
   const quote = await computeQuote(stay);
 
@@ -103,6 +138,7 @@ export async function createBooking(input: {
           email: input.guest.email,
           phone: input.guest.phone,
           country: input.guest.country || null,
+          address: input.guest.address,
           verificationStatus: "VERIFIED",
           idSummary: JSON.stringify(idSummary),
         },
@@ -118,7 +154,7 @@ export async function createBooking(input: {
           nights: quote.nights,
           cleaningFee: quote.cleaningFee,
           total: quote.total,
-          status: "PENDING_APPROVAL",
+          status: autoApprove ? "APPROVED" : "PENDING_APPROVAL",
           guestId: guest.id,
           stripeCustomerId: input.stripe.customerId,
           stripePaymentIntentId: input.stripe.paymentIntentId,
@@ -126,13 +162,28 @@ export async function createBooking(input: {
         },
       });
 
+      const distanceNote =
+        distanceMiles !== null ? ` ~${distanceMiles} miles from property.` : " Distance could not be determined.";
       await tx.eventLog.create({
         data: {
           bookingId: created.id,
           type: "BOOKING_CREATED",
-          detail: `${quote.checkIn} → ${quote.checkOut}, ${stay.guests} guest(s), total ${quote.total}p, payment authorized (${input.stripe.paymentIntentId})`,
+          detail: `${quote.checkIn} → ${quote.checkOut}, ${stay.guests} guest(s), total ${quote.total}p, payment authorized (${input.stripe.paymentIntentId}).${distanceNote}`,
         },
       });
+
+      if (autoApprove) {
+        await tx.eventLog.create({
+          data: {
+            bookingId: created.id,
+            type: "BOOKING_AUTO_APPROVED",
+            detail:
+              distanceMiles !== null
+                ? `Auto-approved — ~${distanceMiles} miles from property (beyond the ${APPROVAL_RADIUS_MILES}-mile radius).`
+                : "Auto-approved — guest address could not be geocoded, so it defaulted to auto-approve.",
+          },
+        });
+      }
 
       return created;
     });
@@ -143,6 +194,55 @@ export async function createBooking(input: {
         error: "Those dates have just been booked — please pick different dates.",
         code: "UNAVAILABLE",
       };
+    }
+
+    const bookingUrl = `${site.url.replace(/\/$/, "")}/admin/bookings/${booking.id}`;
+    const checkInDate = formatDisplayDate(stay.checkIn);
+    const checkOutDate = formatDisplayDate(stay.checkOut);
+
+    if (autoApprove) {
+      // Auto-approval should behave exactly like the host clicking Approve
+      // themselves: capture the already-authorized stay total right away.
+      try {
+        await getPaymentProvider().captureStayPayment(input.stripe.paymentIntentId);
+      } catch (err) {
+        console.error("Auto-approval payment capture failed:", err);
+      }
+
+      const firstName = input.guest.name.split(" ")[0] || input.guest.name;
+      const subject = confirmationEmailSubject();
+      const body = confirmationEmailText({ firstName, checkInDate, checkOutDate });
+      try {
+        await getEmailProvider().send({ to: input.guest.email, subject, text: body });
+        await db.emailLog.create({ data: { bookingId: booking.id, type: "CONFIRMATION", to: input.guest.email, subject, body } });
+      } catch (err) {
+        console.error("Guest confirmation email failed:", err);
+      }
+
+      await notifyHostSafely(
+        hostBookingAutoApprovedSubject({ reference: booking.reference }),
+        hostBookingAutoApprovedText({
+          reference: booking.reference,
+          guestName: input.guest.name,
+          checkInDate,
+          checkOutDate,
+          total: formatGbp(quote.total),
+          distanceMiles,
+          bookingUrl,
+        }),
+      );
+    } else {
+      await notifyHostSafely(
+        hostBookingNeedsApprovalSubject({ reference: booking.reference }),
+        hostBookingNeedsApprovalText({
+          reference: booking.reference,
+          guestName: input.guest.name,
+          checkInDate,
+          checkOutDate,
+          distanceMiles,
+          bookingUrl,
+        }),
+      );
     }
 
     return { ok: true, reference: booking.reference, status: booking.status };
