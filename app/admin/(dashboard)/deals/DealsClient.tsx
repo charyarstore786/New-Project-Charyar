@@ -184,6 +184,13 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                        d.active ? "bg-emerald-50 text-emerald-700" : "bg-ink/5 text-ink/50"
+                      }`}
+                    >
+                      {d.active ? "● Live now" : "○ Turned off"}
+                    </span>
                     <button
                       disabled={pending}
                       onClick={() => onEdit(d)}
@@ -194,11 +201,9 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
                     <button
                       disabled={pending}
                       onClick={() => onToggle(d.id, !d.active)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-                        d.active ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50" : "border-ink/20 text-ink/60 hover:bg-ink/5"
-                      }`}
+                      className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-ink/5 disabled:opacity-50"
                     >
-                      {d.active ? "Active" : "Inactive"}
+                      {d.active ? "Turn off" : "Turn on"}
                     </button>
                     <button
                       disabled={pending}
