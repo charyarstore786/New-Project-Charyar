@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-function buildRules(deposit: number) {
+function buildRules(deposit: number, maxGuests: number) {
   return [
-    ["Maximum 2 guests", "The booking is valid only for the number of guests specified at the time of reservation."],
+    [`Maximum ${maxGuests} guests`, "The booking is valid only for the number of guests specified at the time of reservation."],
     ["No unregistered guests", "No unregistered guests or overnight visitors are allowed without prior approval from the host."],
     ["No smoking or vaping", "Smoking is not permitted inside the property. Smoking is permitted outside only."],
     ["No parties or events", "Parties, gatherings and events are strictly prohibited — please respect our neighbours."],
@@ -70,8 +70,8 @@ function buildFaqs(deposit: number) {
 }
 
 export default async function RulesPage() {
-  const { deposit } = await getPricing();
-  const rules = buildRules(deposit);
+  const { deposit, maxGuests } = await getPricing();
+  const rules = buildRules(deposit, maxGuests);
   const faqs = buildFaqs(deposit);
   return (
     <div className="mx-auto max-w-4xl px-4 pb-24 pt-32 sm:px-6">

@@ -46,8 +46,9 @@ shared with anyone.
 
 ## Damage deposit
 
-- A £200 refundable damage deposit hold is placed on the guest's saved card
-  on check-in day (not charged at booking time).
+- A refundable damage deposit hold (exact amount given in the live policy
+  values above) is placed on the guest's saved card on check-in day (not
+  charged at booking time).
 - Released automatically after checkout, provided the studio is left as
   found; only charged (in part or full) if there's genuine damage.
 
@@ -67,7 +68,7 @@ shared with anyone.
 - No parties, gatherings or events
 - No unregistered guests or overnight visitors without prior host approval
 - Booking is valid only for the number of guests confirmed at reservation
-  (max 2)
+  (see max guests in the live policy values above)
 - Leave the studio clean and tidy — excessive mess may incur a cleaning fee
 - Don't move or remove furniture, decor or amenities
 - Report damages or maintenance issues promptly

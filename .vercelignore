@@ -1,0 +1,8 @@
+.env
+.env.local
+.env.development
+.env.production
+prisma/dev.db
+prisma/dev.db-journal
+leads.json
+chat-widget/leads.json

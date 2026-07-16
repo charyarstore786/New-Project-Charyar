@@ -2,8 +2,9 @@
 // works even without an Anthropic key. Content mirrors app/(site)/rules/page.tsx
 // so answers stay consistent with the public House Rules & FAQ page.
 import { site } from "@/lib/site";
+import type { Pricing } from "@/lib/pricing";
 
-export type FaqEntry = { keywords: string[]; answer: string };
+export type FaqEntry = { keywords: string[]; answer: string | ((pricing: Pricing) => string) };
 
 export const FAQ_ENTRIES: FaqEntry[] = [
   {
@@ -24,7 +25,8 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   },
   {
     keywords: ["deposit", "damage deposit", "hold on my card", "security deposit"],
-    answer: `Your card is saved securely when you book — nothing is charged then. A £${site.deposit} hold is placed on check-in day and released automatically after checkout, provided the studio is left as found.`,
+    answer: (pricing) =>
+      `Your card is saved securely when you book — nothing is charged then. A £${pricing.deposit} hold is placed on check-in day and released automatically after checkout, provided the studio is left as found.`,
   },
   {
     keywords: ["id check", "id verification", "identity", "why do you need my id", "passport"],
@@ -48,7 +50,8 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   },
   {
     keywords: ["how many guests", "max guests", "maximum guests", "sleeps"],
-    answer: `The studio sleeps up to ${site.maxGuests} guests — the booking is only valid for the number of guests confirmed at the time of reservation.`,
+    answer: (pricing) =>
+      `The studio sleeps up to ${pricing.maxGuests} guests — the booking is only valid for the number of guests confirmed at the time of reservation.`,
   },
   {
     keywords: ["visitor", "extra guest", "unregistered", "friend over"],
@@ -84,17 +87,18 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   },
   {
     keywords: ["price", "cost", "rate", "how much", "per night"],
-    answer: `From £${site.nightlyRate} per night — book direct for the best rate, no booking-site fees.`,
+    answer: (pricing) => `From £${pricing.nightlyRate} per night — book direct for the best rate, no booking-site fees.`,
   },
 ];
 
 /** Lightweight keyword match — no AI, works with zero external services. */
-export function matchFaq(text: string): string | null {
+export function matchFaq(text: string, pricing: Pricing): string | null {
   const normalized = text.toLowerCase();
   let best: { entry: FaqEntry; score: number } | null = null;
   for (const entry of FAQ_ENTRIES) {
     const score = entry.keywords.filter((k) => normalized.includes(k)).length;
     if (score > 0 && (!best || score > best.score)) best = { entry, score };
   }
-  return best?.entry.answer ?? null;
+  if (!best) return null;
+  return typeof best.entry.answer === "function" ? best.entry.answer(pricing) : best.entry.answer;
 }
