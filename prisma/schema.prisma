@@ -20,8 +20,9 @@ model Guest {
   phone              String
   country            String?
   // Full home address as typed by the guest (online bookings only) — used
-  // once, at booking time, to geocode a distance from the property and
-  // decide auto- vs manual-approval (see lib/geo.ts). Never shown to anyone.
+  // at booking time to geocode a distance from the property and decide
+  // auto- vs manual-approval (see lib/geo.ts), and shown to the host in the
+  // admin booking detail page and host notification emails.
   address            String?
   // UNVERIFIED | PENDING | VERIFIED | FAILED
   verificationStatus String    @default("UNVERIFIED")

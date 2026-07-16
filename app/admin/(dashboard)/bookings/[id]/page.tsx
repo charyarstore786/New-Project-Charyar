@@ -79,6 +79,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             <Row label="Name" value={booking.guest.name} />
             <Row label="Email" value={booking.guest.email} />
             <Row label="Phone" value={booking.guest.phone} />
+            <Row label="Address" value={booking.guest.address || "—"} />
             <Row label="Country" value={booking.guest.country || "—"} />
             <Row label="Verification" value={booking.guest.verificationStatus} />
           </div>

@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 export type HostBookingAutoApprovedInput = {
   reference: string;
   guestName: string;
+  guestAddress: string | null;
   checkInDate: string;
   checkOutDate: string;
   total: string;
@@ -22,6 +23,7 @@ export function hostBookingAutoApprovedText(input: HostBookingAutoApprovedInput)
 
 Reference: ${input.reference}
 Guest: ${input.guestName}
+Address: ${input.guestAddress || "not provided"}
 Dates: ${input.checkInDate} → ${input.checkOutDate}
 Total: ${input.total}
 ${input.distanceMiles !== null ? `Distance from property: ~${input.distanceMiles} miles (beyond your 20-mile manual-approval radius)` : "Distance from property: couldn't be determined, so it defaulted to auto-approved"}

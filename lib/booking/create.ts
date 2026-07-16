@@ -224,6 +224,7 @@ export async function createBooking(input: {
         hostBookingAutoApprovedText({
           reference: booking.reference,
           guestName: input.guest.name,
+          guestAddress: input.guest.address,
           checkInDate,
           checkOutDate,
           total: formatGbp(quote.total),
@@ -237,6 +238,7 @@ export async function createBooking(input: {
         hostBookingNeedsApprovalText({
           reference: booking.reference,
           guestName: input.guest.name,
+          guestAddress: input.guest.address,
           checkInDate,
           checkOutDate,
           distanceMiles,

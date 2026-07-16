@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 export type HostBookingNeedsApprovalInput = {
   reference: string;
   guestName: string;
+  guestAddress: string | null;
   checkInDate: string;
   checkOutDate: string;
   distanceMiles: number | null;
@@ -21,6 +22,7 @@ export function hostBookingNeedsApprovalText(input: HostBookingNeedsApprovalInpu
 
 Reference: ${input.reference}
 Guest: ${input.guestName}
+Address: ${input.guestAddress || "not provided"}
 Dates: ${input.checkInDate} → ${input.checkOutDate}
 ${input.distanceMiles !== null ? `Distance from property: ~${input.distanceMiles} miles (within your 20-mile manual-approval radius)` : "Distance from property: could not be determined"}
 
