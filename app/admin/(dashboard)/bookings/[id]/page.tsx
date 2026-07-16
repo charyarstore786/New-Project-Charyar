@@ -5,17 +5,11 @@ import { formatGbp } from "@/lib/booking/quote";
 import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import { getPricing } from "@/lib/pricing";
 import StatusBadge from "@/components/admin/StatusBadge";
+import Card from "@/components/admin/Card";
+import Row from "@/components/admin/Row";
+import { IconChevronLeft } from "@/components/admin/icons";
 import ActionButtons from "./ActionButtons";
 import CardSection from "./CardSection";
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-ink/5 py-2 text-sm last:border-0">
-      <span className="text-ink/50">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  );
-}
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -47,14 +41,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <Link href="/admin/bookings" className="text-sm text-ink/50 hover:underline">
-        ← All bookings
+      <Link href="/admin/bookings" className="flex items-center gap-1 text-sm text-ink/50 hover:text-gold-dark">
+        <IconChevronLeft className="text-xs" /> All bookings
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">{booking.reference}</h1>
-          <p className="text-sm text-ink/50">
+          <h1 className="font-display text-2xl font-semibold sm:text-3xl">{booking.reference}</h1>
+          <p className="mt-1 text-sm text-ink/50">
             {booking.checkIn.toISOString().slice(0, 10)} → {booking.checkOut.toISOString().slice(0, 10)} ·{" "}
             {booking.nights} night(s) · {booking.guests} guest(s)
           </p>
@@ -73,7 +67,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        <Card as="section" className="p-5">
           <h2 className="font-display text-lg font-semibold">Guest</h2>
           <div className="mt-3">
             <Row label="Name" value={booking.guest.name} />
@@ -84,7 +78,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             <Row label="Verification" value={booking.guest.verificationStatus} />
           </div>
           {idSummary && (
-            <div className="mt-4 rounded-lg bg-ink/5 p-3 text-sm">
+            <div className="mt-4 rounded-lg bg-gold/[0.07] p-3 text-sm">
               <p className="font-medium">ID check summary</p>
               <p className="mt-1 text-ink/60">
                 {idSummary.documentType} · {idSummary.documentNumber} · checked{" "}
@@ -92,9 +86,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               </p>
             </div>
           )}
-        </section>
+        </Card>
 
-        <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        <Card as="section" className="p-5">
           <h2 className="font-display text-lg font-semibold">Payment</h2>
           <div className="mt-3">
             <Row label="Nightly rate" value={formatGbp(booking.nightlyRate)} />
@@ -109,7 +103,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             <Row label="Deposit status" value={depositStatus} />
             <Row label="Deposit intent" value={<code className="text-xs">{booking.stripeDepositIntentId || "—"}</code>} />
           </div>
-        </section>
+        </Card>
 
         <CardSection
           bookingId={booking.id}
@@ -120,7 +114,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           alreadyCharged={!!booking.stripePaymentIntentId}
         />
 
-        <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        <Card as="section" className="p-5">
           <h2 className="font-display text-lg font-semibold">Damage claims</h2>
           {booking.damageClaims.length === 0 ? (
             <p className="mt-3 text-sm text-ink/50">None recorded.</p>
@@ -135,26 +129,22 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               ))}
             </div>
           )}
-        </section>
+        </Card>
 
-        <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+        <Card as="section" className="p-5">
           <h2 className="font-display text-lg font-semibold">Emails sent</h2>
           {booking.emails.length === 0 ? (
             <p className="mt-3 text-sm text-ink/50">None yet.</p>
           ) : (
             <div className="mt-3">
               {booking.emails.map((e) => (
-                <Row
-                  key={e.id}
-                  label={e.type}
-                  value={new Date(e.sentAt).toLocaleString("en-GB")}
-                />
+                <Row key={e.id} label={e.type} value={new Date(e.sentAt).toLocaleString("en-GB")} />
               ))}
             </div>
           )}
-        </section>
+        </Card>
 
-        <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm lg:col-span-2">
+        <Card as="section" className="p-5 lg:col-span-2">
           <h2 className="font-display text-lg font-semibold">Activity log</h2>
           {events.length === 0 ? (
             <p className="mt-3 text-sm text-ink/50">No events yet.</p>
@@ -169,7 +159,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </div>
     </div>
   );

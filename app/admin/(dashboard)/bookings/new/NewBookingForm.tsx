@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import Calendar from "@/components/booking/Calendar";
+import Card from "@/components/admin/Card";
 import { createManualBooking } from "./actions";
 
 type Props = {
@@ -53,7 +54,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
 
   return (
     <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="rounded-2xl border border-ink/10 bg-white p-6">
+      <Card className="p-6">
         <h2 className="font-display text-lg font-semibold">Dates</h2>
         <div className="mt-4">
           <Calendar
@@ -68,10 +69,10 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
             }}
           />
         </div>
-      </div>
+      </Card>
 
       <div className="flex flex-col gap-4">
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <Card className="p-6">
           <h2 className="font-display text-lg font-semibold">Guest details</h2>
           <div className="mt-4 grid gap-4">
             <label className="block">
@@ -79,7 +80,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
               <select
                 value={guests}
                 onChange={(e) => setGuests(Number(e.target.value))}
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               >
                 {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
@@ -94,7 +95,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Smith"
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               />
             </label>
             <label className="block">
@@ -104,7 +105,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jane@example.com"
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               />
             </label>
             <label className="block">
@@ -114,7 +115,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+44 7700 900123"
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               />
             </label>
             <label className="block">
@@ -123,7 +124,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder="United Kingdom"
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               />
             </label>
             <label className="block">
@@ -133,7 +134,7 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
                 placeholder="e.g. Booked by phone, paying by bank transfer"
-                className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 w-full"
               />
             </label>
             <label className="flex items-center gap-2 text-sm">
@@ -141,9 +142,9 @@ export default function NewBookingForm({ blocked, horizonDays, maxNights, maxGue
               Send the guest a confirmation email
             </label>
           </div>
-        </div>
+        </Card>
 
-        <button type="submit" disabled={pending} className="btn-fancy px-6 py-3 disabled:opacity-40">
+        <button type="submit" disabled={pending} className="admin-btn admin-btn-primary py-3">
           {pending ? "Saving…" : "Add booking"}
         </button>
         {error && <p className="text-sm font-medium text-red-700">{error}</p>}

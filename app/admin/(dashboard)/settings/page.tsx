@@ -1,4 +1,6 @@
 import { getPricing } from "@/lib/pricing";
+import Card from "@/components/admin/Card";
+import PageHeader from "@/components/admin/PageHeader";
 import SettingsForm from "./SettingsForm";
 
 // Reads live DB data — must never be statically prerendered at build time.
@@ -9,14 +11,15 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold">Settings</h1>
-      <p className="mt-1 text-sm text-ink/50">
-        Pricing and booking policy — changes apply across the site immediately.
-      </p>
+      <PageHeader
+        eyebrow="Configuration"
+        title="Settings"
+        subtitle="Pricing and booking policy — changes apply across the site immediately."
+      />
 
-      <div className="mt-6 max-w-xl rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+      <Card className="mt-6 max-w-xl p-6">
         <SettingsForm initial={pricing} />
-      </div>
+      </Card>
 
       <p className="mt-4 max-w-xl text-xs text-ink/40">
         This nightly rate is the base rate. To offer a lower rate or discount for specific dates

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatGbp } from "@/lib/booking/quote";
 import StatusBadge from "@/components/admin/StatusBadge";
+import Card from "@/components/admin/Card";
+import PageHeader from "@/components/admin/PageHeader";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -40,20 +42,23 @@ export default async function AdminBookingsPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-semibold">Bookings</h1>
-        <Link href="/admin/bookings/new" className="btn-fancy px-4 py-2 text-sm">
-          + Add booking
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Reservations"
+        title="Bookings"
+        actions={
+          <Link href="/admin/bookings/new" className="admin-btn admin-btn-primary">
+            + Add booking
+          </Link>
+        }
+      />
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.key}
             href={f.key === "all" ? "/admin/bookings" : `/admin/bookings?status=${f.key}`}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              activeFilter === f.key ? "bg-ink text-white" : "bg-white text-ink/60 hover:bg-ink/5"
+              activeFilter === f.key ? "bg-ink text-white" : "bg-white text-ink/60 hover:bg-gold/10"
             }`}
           >
             {f.label}
@@ -68,27 +73,27 @@ export default async function AdminBookingsPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search by reference, guest name or email…"
-          className="w-full max-w-sm rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+          className="admin-input w-full max-w-sm"
         />
       </form>
 
-      <div className="mt-5 overflow-x-auto rounded-2xl border border-ink/10 bg-white shadow-sm">
+      <Card className="mt-5 overflow-x-auto p-0">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="border-b border-ink/10 text-left text-ink/50">
-              <th className="px-5 py-3 font-medium">Reference</th>
-              <th className="px-5 py-3 font-medium">Guest</th>
-              <th className="px-5 py-3 font-medium">Dates</th>
-              <th className="px-5 py-3 font-medium">Guests</th>
-              <th className="px-5 py-3 font-medium">Total</th>
-              <th className="px-5 py-3 font-medium">Status</th>
+            <tr className="border-b border-ink/10 text-left text-ink/45">
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Reference</th>
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Guest</th>
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Dates</th>
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Guests</th>
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Total</th>
+              <th className="admin-eyebrow px-5 py-3 font-semibold">Status</th>
             </tr>
           </thead>
           <tbody>
             {bookings.map((b) => (
-              <tr key={b.id} className="border-b border-ink/5 last:border-0 hover:bg-ink/5">
+              <tr key={b.id} className="border-b border-ink/5 transition-colors last:border-0 hover:bg-gold/[0.05]">
                 <td className="px-5 py-3">
-                  <Link href={`/admin/bookings/${b.id}`} className="font-medium text-accent-dark hover:underline">
+                  <Link href={`/admin/bookings/${b.id}`} className="font-medium text-gold-dark hover:underline">
                     {b.reference}
                   </Link>
                 </td>
@@ -100,7 +105,7 @@ export default async function AdminBookingsPage({
                   {b.checkIn.toISOString().slice(0, 10)} → {b.checkOut.toISOString().slice(0, 10)}
                 </td>
                 <td className="px-5 py-3">{b.guests}</td>
-                <td className="px-5 py-3 font-medium">{formatGbp(b.total)}</td>
+                <td className="admin-stat-value px-5 py-3 font-medium">{formatGbp(b.total)}</td>
                 <td className="px-5 py-3">
                   <StatusBadge status={b.status} />
                 </td>
@@ -115,7 +120,7 @@ export default async function AdminBookingsPage({
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -10,6 +10,9 @@
   --color-ink: #1e1b17;
   --color-accent: #ec4899;
   --color-accent-dark: #db2777;
+  --color-gold: #c9a961;
+  --color-gold-light: #ecdfb8;
+  --color-gold-dark: #8f7434;
 }
 
 html {
@@ -99,3 +102,214 @@ body {
 .delay-100 { animation-delay: 100ms; }
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
+
+/* =========================================================================
+   Admin dashboard — luxury design layer. A distinct charcoal/gold identity
+   from the guest-facing pink brand, since this is an internal back-office
+   tool rather than something guests ever see.
+   ========================================================================= */
+
+.admin-shell {
+  background:
+    radial-gradient(1100px 560px at 100% -10%, rgba(201, 169, 97, 0.09), transparent 55%),
+    radial-gradient(760px 460px at -10% 108%, rgba(30, 27, 23, 0.04), transparent 55%),
+    #f7f5f0;
+}
+
+.admin-card {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(30, 27, 23, 0.07);
+  background: #fffefb;
+  box-shadow:
+    0 1px 2px rgba(30, 27, 23, 0.04),
+    0 18px 34px -20px rgba(30, 27, 23, 0.18);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.admin-card-hover:hover {
+  border-color: rgba(201, 169, 97, 0.45);
+  box-shadow:
+    0 1px 2px rgba(30, 27, 23, 0.04),
+    0 22px 40px -18px rgba(201, 169, 97, 0.3);
+  transform: translateY(-2px);
+}
+
+.admin-input {
+  border-radius: 0.6rem;
+  border: 1px solid rgba(30, 27, 23, 0.13);
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.admin-input:focus {
+  border-color: var(--color-gold-dark);
+  box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.18);
+}
+
+.admin-sidebar {
+  background: linear-gradient(185deg, #221e18 0%, #17140f 55%, #0d0b09 100%);
+  position: relative;
+}
+.admin-sidebar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(201, 169, 97, 0.3), transparent);
+}
+
+.admin-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: 0.85rem;
+  background: linear-gradient(140deg, #ecdfb8, #c9a961 55%, #8f7434);
+  color: #17140f;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 8px 18px -6px rgba(201, 169, 97, 0.55);
+}
+
+.admin-nav-link {
+  position: relative;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.admin-nav-link[data-active="true"] {
+  background: linear-gradient(90deg, rgba(201, 169, 97, 0.18), rgba(201, 169, 97, 0.02));
+  color: #f4e9cc;
+}
+.admin-nav-link[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ecdfb8, #c9a961);
+  box-shadow: 0 0 10px rgba(201, 169, 97, 0.65);
+}
+.admin-nav-icon {
+  color: rgba(255, 255, 255, 0.42);
+  transition: color 0.2s ease;
+}
+.admin-nav-link:hover .admin-nav-icon,
+.admin-nav-link[data-active="true"] .admin-nav-icon {
+  color: #ecdfb8;
+}
+
+.admin-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.admin-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(30, 27, 23, 0.4);
+}
+
+/* Buttons — semantic variants layered on the shared .admin-btn base. Kept
+   separate from .btn-fancy/-red/-blue, which are the guest-facing pink
+   brand buttons and must stay untouched by this palette. */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+.admin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.admin-btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, #ecdfb8 0%, #c9a961 50%, #8f7434 100%);
+  color: #17140f;
+  box-shadow:
+    0 4px 14px rgba(201, 169, 97, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.admin-btn-primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 22px rgba(201, 169, 97, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.admin-btn-outline {
+  border: 1px solid rgba(30, 27, 23, 0.15);
+  color: var(--color-ink);
+  background: #fff;
+}
+.admin-btn-outline:not(:disabled):hover {
+  border-color: rgba(201, 169, 97, 0.55);
+  background: rgba(201, 169, 97, 0.08);
+}
+
+.admin-btn-dark {
+  background: var(--color-ink);
+  color: #fff;
+}
+.admin-btn-dark:not(:disabled):hover {
+  background: #322c24;
+}
+
+.admin-btn-danger-outline {
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #b91c1c;
+  background: #fff;
+}
+.admin-btn-danger-outline:not(:disabled):hover {
+  background: rgba(220, 38, 38, 0.07);
+}
+
+.admin-btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+.admin-btn-danger:not(:disabled):hover {
+  background: #b91c1c;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.3rem 0.75rem 0.3rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.admin-badge-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  flex: none;
+}

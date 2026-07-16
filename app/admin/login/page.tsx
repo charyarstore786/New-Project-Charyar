@@ -35,22 +35,25 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink px-4">
+    <div className="admin-sidebar flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur"
+        className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur"
       >
-        <h1 className="font-display text-xl font-semibold text-white">Admin sign in</h1>
-        <p className="mt-1 text-sm text-white/50">Short Stay Newport dashboard</p>
+        <div className="flex flex-col items-center text-center">
+          <span className="admin-brand-mark h-12 w-12 text-lg">SN</span>
+          <h1 className="mt-4 font-display text-xl font-semibold text-white">Admin sign in</h1>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/35">Short Stay Newport</p>
+        </div>
 
-        <label className="mt-6 block text-sm text-white/70">
+        <label className="mt-7 block text-sm text-white/70">
           Password
           <input
             type="password"
             autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white outline-none focus:border-accent"
+            className="mt-1.5 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2.5 text-white outline-none transition-colors focus:border-gold/60 focus:bg-white/10"
           />
         </label>
 
@@ -59,7 +62,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading || !password}
-          className="btn-fancy mt-6 w-full px-4 py-2.5 disabled:opacity-50"
+          className="admin-btn admin-btn-primary mt-6 w-full py-2.5"
         >
           {loading ? "Signing in…" : "Sign in"}
         </button>

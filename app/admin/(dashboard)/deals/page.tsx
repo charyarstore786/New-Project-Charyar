@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import PageHeader from "@/components/admin/PageHeader";
 import DealsClient from "./DealsClient";
 
 // Reads live DB data — must never be statically prerendered at build time.
@@ -9,10 +10,11 @@ export default async function DealsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold">Deals</h1>
-      <p className="mt-1 text-sm text-ink/50">
-        Date-range discounts, applied automatically on top of the base nightly rate.
-      </p>
+      <PageHeader
+        eyebrow="Promotions"
+        title="Deals"
+        subtitle="Date-range discounts, applied automatically on top of the base nightly rate."
+      />
 
       <div className="mt-6">
         <DealsClient

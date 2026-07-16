@@ -1,19 +1,29 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { ADMIN_COOKIE, verifySessionToken } from "@/lib/admin/auth";
 import LogoutButton from "./LogoutButton";
+import NavLink from "@/components/admin/NavLink";
+import {
+  IconOverview,
+  IconBookings,
+  IconCalendar,
+  IconGuests,
+  IconAnalytics,
+  IconDeals,
+  IconSync,
+  IconSettings,
+} from "@/components/admin/icons";
 
 const NAV = [
-  { href: "/admin", label: "Overview", icon: "📊" },
-  { href: "/admin/bookings", label: "Bookings", icon: "📋" },
-  { href: "/admin/calendar", label: "Calendar", icon: "🗓️" },
-  { href: "/admin/guests", label: "Guests", icon: "🧑‍🤝‍🧑" },
-  { href: "/admin/analytics", label: "Analytics", icon: "📈" },
-  { href: "/admin/deals", label: "Deals", icon: "🏷️" },
-  { href: "/admin/sync", label: "iCal Sync", icon: "🔄" },
-  { href: "/admin/settings", label: "Settings", icon: "⚙️" },
+  { href: "/admin", label: "Overview", icon: <IconOverview /> },
+  { href: "/admin/bookings", label: "Bookings", icon: <IconBookings /> },
+  { href: "/admin/calendar", label: "Calendar", icon: <IconCalendar /> },
+  { href: "/admin/guests", label: "Guests", icon: <IconGuests /> },
+  { href: "/admin/analytics", label: "Analytics", icon: <IconAnalytics /> },
+  { href: "/admin/deals", label: "Deals", icon: <IconDeals /> },
+  { href: "/admin/sync", label: "iCal Sync", icon: <IconSync /> },
+  { href: "/admin/settings", label: "Settings", icon: <IconSettings /> },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -21,43 +31,40 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!verifySessionToken(token)) redirect("/admin/login");
 
   return (
-    <div className="min-h-screen bg-[#f6f5f3] text-ink">
+    <div className="admin-shell min-h-screen text-ink">
       <div className="flex min-h-screen">
-        <aside className="hidden w-60 flex-none flex-col border-r border-ink/10 bg-ink px-4 py-6 text-white sm:flex">
-          <p className="px-2 font-display text-lg font-semibold">Short Stay Newport</p>
-          <p className="px-2 text-xs text-white/40">Admin dashboard</p>
+        <aside className="admin-sidebar hidden w-64 flex-none flex-col px-4 py-6 text-white sm:flex">
+          <div className="flex items-center gap-3 px-2">
+            <span className="admin-brand-mark">SN</span>
+            <div>
+              <p className="font-display text-base font-semibold leading-tight">Short Stay Newport</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-white/35">Admin dashboard</p>
+            </div>
+          </div>
 
           <nav className="mt-8 flex flex-1 flex-col gap-1">
             {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <span aria-hidden>{item.icon}</span>
-                {item.label}
-              </Link>
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
             ))}
           </nav>
 
-          <LogoutButton />
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <LogoutButton />
+          </div>
         </aside>
 
         <div className="flex-1">
           {/* Mobile top nav */}
-          <div className="flex items-center justify-between border-b border-ink/10 bg-ink px-4 py-3 text-white sm:hidden">
-            <p className="font-display font-semibold">Short Stay Newport</p>
+          <div className="admin-sidebar flex items-center justify-between px-4 py-3 text-white sm:hidden">
+            <div className="flex items-center gap-2.5">
+              <span className="admin-brand-mark h-8 w-8 text-sm">SN</span>
+              <p className="font-display text-sm font-semibold">Short Stay Newport</p>
+            </div>
             <LogoutButton compact />
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-b border-ink/10 bg-white px-2 py-2 sm:hidden">
+          <nav className="flex gap-1.5 overflow-x-auto border-b border-ink/10 bg-white/80 px-2 py-2 backdrop-blur sm:hidden">
             {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex-none rounded-full px-3 py-1.5 text-sm text-ink/70 hover:bg-ink/5"
-              >
-                {item.icon} {item.label}
-              </Link>
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} compact />
             ))}
           </nav>
 

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import Card from "@/components/admin/Card";
 import { createManualBlock, deleteManualBlock } from "./actions";
 
 export type ManualBlockRow = {
@@ -48,7 +49,7 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
   }
 
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+    <Card className="p-6">
       <h2 className="font-display text-lg font-semibold">Block dates</h2>
       <p className="mt-1 text-sm text-ink/50">
         Mark nights unavailable without creating a booking — e.g. personal use or maintenance.
@@ -61,7 +62,7 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+            className="admin-input mt-1 w-full"
           />
         </label>
         <label className="block">
@@ -70,7 +71,7 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+            className="admin-input mt-1 w-full"
           />
         </label>
         <label className="block sm:col-span-2">
@@ -79,11 +80,11 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="e.g. Personal use, maintenance"
-            className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+            className="admin-input mt-1 w-full"
           />
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
-          <button type="submit" disabled={pending} className="btn-fancy px-5 py-2.5 text-sm disabled:opacity-50">
+          <button type="submit" disabled={pending} className="admin-btn admin-btn-primary">
             {pending ? "Blocking…" : "Block dates"}
           </button>
           {message && <p className="text-sm font-medium text-emerald-700">{message}</p>}
@@ -105,7 +106,7 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
                   type="button"
                   disabled={pending}
                   onClick={() => onDelete(b.id)}
-                  className="rounded-full border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="admin-btn admin-btn-danger-outline admin-btn-sm"
                 >
                   Remove
                 </button>
@@ -114,6 +115,6 @@ export default function BlockDatesForm({ blocks }: { blocks: ManualBlockRow[] })
           </ul>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

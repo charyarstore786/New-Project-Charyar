@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatGbp } from "@/lib/booking/quote";
+import Card from "@/components/admin/Card";
+import PageHeader from "@/components/admin/PageHeader";
 
 // Reads live DB data — must never be statically prerendered at build time.
 export const dynamic = "force-dynamic";
@@ -27,37 +29,36 @@ export default async function GuestsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold">Guests</h1>
-      <p className="mt-1 text-sm text-ink/50">Everyone who's booked, with their stay history.</p>
+      <PageHeader eyebrow="People" title="Guests" subtitle="Everyone who's booked, with their stay history." />
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-ink/10 bg-white shadow-sm">
+      <Card className="mt-6 overflow-x-auto p-0">
         {rows.length === 0 ? (
           <p className="px-5 py-6 text-sm text-ink/50">No guests yet.</p>
         ) : (
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-ink/10 text-left text-ink/50">
-                <th className="px-5 py-3 font-medium">Guest</th>
-                <th className="px-5 py-3 font-medium">Contact</th>
-                <th className="px-5 py-3 font-medium">Bookings</th>
-                <th className="px-5 py-3 font-medium">Total spent</th>
-                <th className="px-5 py-3 font-medium">Most recent stay</th>
-                <th className="px-5 py-3 font-medium">Verification</th>
+              <tr className="border-b border-ink/10 text-left text-ink/45">
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Guest</th>
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Contact</th>
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Bookings</th>
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Total spent</th>
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Most recent stay</th>
+                <th className="admin-eyebrow px-5 py-3 font-semibold">Verification</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((g) => (
-                <tr key={g.id} className="border-b border-ink/5 last:border-0 hover:bg-ink/5">
+                <tr key={g.id} className="border-b border-ink/5 transition-colors last:border-0 hover:bg-gold/[0.05]">
                   <td className="px-5 py-4 font-medium">{g.name}</td>
                   <td className="px-5 py-4 text-ink/70">
                     <p>{g.email}</p>
                     <p className="text-xs text-ink/40">{g.phone}</p>
                   </td>
                   <td className="px-5 py-4">{g.bookingCount}</td>
-                  <td className="px-5 py-4 font-medium">{formatGbp(g.totalSpentPence)}</td>
+                  <td className="admin-stat-value px-5 py-4 font-medium">{formatGbp(g.totalSpentPence)}</td>
                   <td className="px-5 py-4">
                     {g.mostRecent ? (
-                      <Link href={`/admin/bookings/${g.mostRecent.id}`} className="text-accent-dark hover:underline">
+                      <Link href={`/admin/bookings/${g.mostRecent.id}`} className="text-gold-dark hover:underline">
                         {g.mostRecent.checkIn.toISOString().slice(0, 10)} ({g.mostRecent.reference})
                       </Link>
                     ) : (
@@ -70,7 +71,7 @@ export default async function GuestsPage() {
             </tbody>
           </table>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

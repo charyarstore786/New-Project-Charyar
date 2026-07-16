@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBlockedNights } from "@/lib/booking/availability";
 import { BOOKING_HORIZON_DAYS } from "@/lib/booking/quote";
 import { getPricing } from "@/lib/pricing";
+import { IconChevronLeft } from "@/components/admin/icons";
 import NewBookingForm from "./NewBookingForm";
 
 export default async function NewBookingPage() {
@@ -9,11 +10,12 @@ export default async function NewBookingPage() {
 
   return (
     <div>
-      <Link href="/admin/bookings" className="text-sm text-ink/50 hover:underline">
-        ← All bookings
+      <Link href="/admin/bookings" className="flex items-center gap-1 text-sm text-ink/50 hover:text-gold-dark">
+        <IconChevronLeft className="text-xs" /> All bookings
       </Link>
-      <h1 className="mt-2 font-display text-2xl font-semibold">Add a booking manually</h1>
-      <p className="mt-1 text-sm text-ink/50">
+      <p className="admin-eyebrow mt-3">New booking</p>
+      <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Add a booking manually</h1>
+      <p className="mt-1.5 text-sm text-ink/50">
         For guests you're booking directly by phone, WhatsApp or in person.
       </p>
 

@@ -4,6 +4,17 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { DepositStatus } from "@/lib/booking/depositStatus";
 import {
+  IconCheck,
+  IconX,
+  IconMail,
+  IconLock,
+  IconLockOpen,
+  IconHandshake,
+  IconCreditCard,
+  IconReceipt,
+  IconTrash,
+} from "@/components/admin/icons";
+import {
   addDamageClaim,
   approveBooking,
   cancelBooking,
@@ -88,17 +99,17 @@ export default function ActionButtons({
               type="button"
               disabled={pending}
               onClick={() => run(() => approveBooking(bookingId), "Booking approved — confirmation email logged.")}
-              className="btn-fancy px-4 py-2 text-sm disabled:opacity-50"
+              className="admin-btn admin-btn-primary"
             >
-              ✓ Approve
+              <IconCheck /> Approve
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => setShowRejectForm((v) => !v)}
-              className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="admin-btn admin-btn-danger-outline"
             >
-              ✕ Reject
+              <IconX /> Reject
             </button>
           </>
         )}
@@ -109,7 +120,7 @@ export default function ActionButtons({
             type="button"
             disabled={pending}
             onClick={() => run(() => updateBookingStatus(bookingId, next.value), `Status updated to ${next.value}.`)}
-            className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+            className="admin-btn admin-btn-outline"
           >
             {next.label}
           </button>
@@ -119,9 +130,9 @@ export default function ActionButtons({
           type="button"
           disabled={pending}
           onClick={() => run(() => sendConfirmationEmail(bookingId), "Confirmation email (re)logged.")}
-          className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+          className="admin-btn admin-btn-outline"
         >
-          ✉ Resend confirmation
+          <IconMail /> Resend confirmation
         </button>
 
         {(depositStatus === "NONE" || depositStatus === "DECLINED" || depositStatus === "WAIVED") &&
@@ -133,9 +144,14 @@ export default function ActionButtons({
                 setDepositHoldAmount(String(depositAmount));
                 setShowDepositForm((v) => !v);
               }}
-              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+              className="admin-btn admin-btn-outline"
             >
-              🔒 {depositStatus === "DECLINED" ? "Retry deposit hold" : depositStatus === "WAIVED" ? "Place deposit hold after all" : "Place deposit hold"}
+              <IconLock />{" "}
+              {depositStatus === "DECLINED"
+                ? "Retry deposit hold"
+                : depositStatus === "WAIVED"
+                  ? "Place deposit hold after all"
+                  : "Place deposit hold"}
             </button>
           )}
 
@@ -145,9 +161,9 @@ export default function ActionButtons({
               type="button"
               disabled={pending}
               onClick={() => run(() => waiveDeposit(bookingId), "Deposit waived — no hold will be attempted.")}
-              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+              className="admin-btn admin-btn-outline"
             >
-              🤝 Skip deposit for this guest
+              <IconHandshake /> Skip deposit for this guest
             </button>
           )}
 
@@ -157,17 +173,17 @@ export default function ActionButtons({
               type="button"
               disabled={pending}
               onClick={() => run(() => releaseDeposit(bookingId), "Deposit released.")}
-              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+              className="admin-btn admin-btn-outline"
             >
-              🔓 Release deposit
+              <IconLockOpen /> Release deposit
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => setShowChargeForm((v) => !v)}
-              className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="admin-btn admin-btn-danger-outline"
             >
-              💳 Charge damage
+              <IconCreditCard /> Charge damage
             </button>
           </>
         )}
@@ -176,9 +192,9 @@ export default function ActionButtons({
           type="button"
           disabled={pending}
           onClick={() => setShowClaimForm((v) => !v)}
-          className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+          className="admin-btn admin-btn-outline"
         >
-          🧾 Add damage claim
+          <IconReceipt /> Add damage claim
         </button>
 
         {!TERMINAL_STATUSES.includes(status) && !PRE_APPROVAL_STATUSES.includes(status) && (
@@ -186,9 +202,9 @@ export default function ActionButtons({
             type="button"
             disabled={pending}
             onClick={() => setShowCancelForm((v) => !v)}
-            className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            className="admin-btn admin-btn-danger-outline"
           >
-            ✕ Cancel booking
+            <IconX /> Cancel booking
           </button>
         )}
       </div>
@@ -232,7 +248,7 @@ export default function ActionButtons({
               setChargeAmount("");
               setChargeNote("");
             }}
-            className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            className="admin-btn admin-btn-danger mt-3"
           >
             Confirm charge
           </button>
@@ -240,7 +256,7 @@ export default function ActionButtons({
       )}
 
       {showDepositForm && (
-        <div className="rounded-xl border border-ink/15 bg-white p-4">
+        <div className="admin-card p-4">
           <p className="text-sm text-ink/70">
             Defaults to the site's standard £{depositAmount} deposit — lower it for a guest who can only support a
             smaller hold (e.g. £100), or raise it, before confirming.
@@ -253,7 +269,7 @@ export default function ActionButtons({
               step="0.01"
               value={depositHoldAmount}
               onChange={(e) => setDepositHoldAmount(e.target.value)}
-              className="mt-1 block w-32 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 block w-32"
             />
           </label>
           <button
@@ -266,7 +282,7 @@ export default function ActionButtons({
               );
               setShowDepositForm(false);
             }}
-            className="mt-3 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/80 disabled:opacity-50"
+            className="admin-btn admin-btn-dark mt-3"
           >
             Confirm hold
           </button>
@@ -291,7 +307,7 @@ export default function ActionButtons({
               run(() => rejectBooking(bookingId, reason), "Booking rejected — authorization released.");
               setShowRejectForm(false);
             }}
-            className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            className="admin-btn admin-btn-danger mt-3"
           >
             Confirm reject
           </button>
@@ -299,7 +315,7 @@ export default function ActionButtons({
       )}
 
       {showClaimForm && (
-        <div className="rounded-xl border border-ink/15 bg-white p-4">
+        <div className="admin-card p-4">
           <div className="flex flex-wrap gap-3">
             <label className="text-sm">
               Amount (£)
@@ -309,7 +325,7 @@ export default function ActionButtons({
                 step="0.01"
                 value={claimAmount}
                 onChange={(e) => setClaimAmount(e.target.value)}
-                className="mt-1 block w-32 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 block w-32"
               />
             </label>
             <label className="flex-1 text-sm">
@@ -318,7 +334,7 @@ export default function ActionButtons({
                 type="text"
                 value={claimNote}
                 onChange={(e) => setClaimNote(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="admin-input mt-1 block w-full"
               />
             </label>
           </div>
@@ -334,7 +350,7 @@ export default function ActionButtons({
               setClaimAmount("");
               setClaimNote("");
             }}
-            className="mt-3 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/80 disabled:opacity-50"
+            className="admin-btn admin-btn-dark mt-3"
           >
             Record claim
           </button>
@@ -364,7 +380,7 @@ export default function ActionButtons({
               run(() => cancelBooking(bookingId, cancelReason), "Booking cancelled.");
               setShowCancelForm(false);
             }}
-            className="mt-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            className="admin-btn admin-btn-danger mt-3"
           >
             Confirm cancel
           </button>
@@ -382,9 +398,9 @@ export default function ActionButtons({
             type="button"
             disabled={pending}
             onClick={() => setShowDeleteForm(true)}
-            className="mt-3 rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+            className="admin-btn admin-btn-danger-outline mt-3"
           >
-            🗑 Delete booking
+            <IconTrash /> Delete booking
           </button>
         ) : (
           <div className="mt-3">
@@ -401,7 +417,7 @@ export default function ActionButtons({
                 type="button"
                 disabled={pending || deleteConfirmText !== reference}
                 onClick={onDelete}
-                className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="admin-btn admin-btn-danger"
               >
                 {pending ? "Deleting…" : "Delete permanently"}
               </button>
@@ -413,7 +429,7 @@ export default function ActionButtons({
                   setDeleteConfirmText("");
                   setDeleteError(null);
                 }}
-                className="rounded-full border border-ink/15 px-4 py-2 text-sm font-medium hover:bg-ink/5 disabled:opacity-50"
+                className="admin-btn admin-btn-outline"
               >
                 Cancel
               </button>

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { toIsoDate } from "@/lib/booking/dates";
+import PageHeader from "@/components/admin/PageHeader";
+import { IconChevronLeft, IconChevronRight } from "@/components/admin/icons";
 import BlockDatesForm from "./BlockDatesForm";
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -77,26 +79,27 @@ export default async function AdminCalendarPage({
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold">Calendar</h1>
-      <p className="mt-1 text-sm text-ink/50">
-        Direct bookings and externally synced blocks (Airbnb / Booking.com / Vrbo via Sympl).
-      </p>
+      <PageHeader
+        eyebrow="Availability"
+        title="Calendar"
+        subtitle="Direct bookings and externally synced blocks (Airbnb / Booking.com / Vrbo via Sympl)."
+      />
 
       <div className="mt-5 flex items-center justify-between">
         <Link
           href={`/admin/calendar?y=${prev.getUTCFullYear()}&m=${prev.getUTCMonth() + 1}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 hover:bg-ink/5"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 hover:border-gold/50 hover:bg-gold/10"
         >
-          ←
+          <IconChevronLeft />
         </Link>
         <p className="font-display text-lg font-semibold">
           {MONTHS[month]} {year}
         </p>
         <Link
           href={`/admin/calendar?y=${next.getUTCFullYear()}&m=${next.getUTCMonth() + 1}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 hover:bg-ink/5"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 hover:border-gold/50 hover:bg-gold/10"
         >
-          →
+          <IconChevronRight />
         </Link>
       </div>
 
@@ -111,14 +114,14 @@ export default async function AdminCalendarPage({
           const info = nightInfo.get(iso);
           const cell = (
             <div
-              className={`flex h-20 flex-col rounded-lg border p-1.5 text-left text-xs ${
+              className={`flex h-20 flex-col rounded-lg border p-1.5 text-left text-xs transition-colors ${
                 info
                   ? info.manual
                     ? "border-amber-200 bg-amber-50"
                     : info.external
                       ? "border-sky-200 bg-sky-50"
-                      : "border-accent/30 bg-accent/10"
-                  : "border-ink/10 bg-white"
+                      : "border-gold/40 bg-gold/10"
+                  : "border-ink/10 bg-white hover:border-gold/30"
               }`}
             >
               <span className="font-semibold">{Number(iso.slice(8, 10))}</span>
@@ -137,7 +140,7 @@ export default async function AdminCalendarPage({
 
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-ink/50">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded bg-accent/20" /> Direct booking
+          <span className="inline-block h-3 w-3 rounded bg-gold/25" /> Direct booking
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded bg-sky-100" /> External (Sympl)

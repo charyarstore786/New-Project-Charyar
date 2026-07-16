@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import StripePaymentForm from "@/components/booking/StripePaymentForm";
 import { stripeConfigured } from "@/lib/stripe/browserClient";
 import { formatGbp } from "@/lib/booking/format";
+import Card from "@/components/admin/Card";
+import { IconCreditCard, IconCheck } from "@/components/admin/icons";
 import { attachCard, chargeStayTotal } from "./actions";
 
 type Props = {
@@ -80,7 +82,7 @@ export default function CardSection({ bookingId, guestName, guestEmail, total, h
   if (alreadyCharged) return null;
 
   return (
-    <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+    <Card as="section" className="p-5">
       <h2 className="font-display text-lg font-semibold">Card on file</h2>
       {message && <p className="mt-2 text-sm font-medium text-emerald-700">{message}</p>}
       {error && <p className="mt-2 text-sm font-medium text-red-700">{error}</p>}
@@ -91,12 +93,8 @@ export default function CardSection({ bookingId, guestName, guestEmail, total, h
             No card saved yet — optional. Add one if you want the option to place a damage-deposit hold or charge
             the stay total later.
           </p>
-          <button
-            type="button"
-            onClick={startCollecting}
-            className="btn-fancy mt-4 px-4 py-2 text-sm"
-          >
-            💳 Add card on file
+          <button type="button" onClick={startCollecting} className="admin-btn admin-btn-primary mt-4">
+            <IconCreditCard /> Add card on file
           </button>
         </>
       )}
@@ -119,21 +117,18 @@ export default function CardSection({ bookingId, guestName, guestEmail, total, h
 
       {hasCard && (
         <>
-          <p className="mt-2 text-sm text-emerald-700">✓ Card saved for this guest.</p>
+          <p className="flex items-center gap-1.5 text-sm text-emerald-700">
+            <IconCheck className="text-xs" /> Card saved for this guest.
+          </p>
           <p className="mt-1 text-sm text-ink/60">
             Entirely optional — charge the stay total ({formatGbp(total)}) now, or leave it and just use the deposit
             hold below.
           </p>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={onChargeNow}
-            className="btn-fancy mt-4 px-4 py-2 text-sm disabled:opacity-50"
-          >
-            {pending ? "Charging…" : `💷 Charge ${formatGbp(total)} now`}
+          <button type="button" disabled={pending} onClick={onChargeNow} className="admin-btn admin-btn-primary mt-4">
+            {pending ? "Charging…" : `Charge ${formatGbp(total)} now`}
           </button>
         </>
       )}
-    </section>
+    </Card>
   );
 }

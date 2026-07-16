@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import Card from "@/components/admin/Card";
 import { createDeal, deleteDeal, toggleDealActive, updateDeal, type DealType } from "./actions";
 
 export type DealRow = {
@@ -91,7 +92,8 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={onSubmit} className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+      <Card as="section" className="p-6">
+        <form onSubmit={onSubmit}>
         <h2 className="font-display text-lg font-semibold">{editingId ? "Edit deal" : "New deal"}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block sm:col-span-2">
@@ -100,7 +102,7 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. August off-season"
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 w-full"
             />
           </label>
           <label className="block">
@@ -109,7 +111,7 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 w-full"
             />
           </label>
           <label className="block">
@@ -118,7 +120,7 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 w-full"
             />
           </label>
           <label className="block">
@@ -126,7 +128,7 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as DealType)}
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 w-full"
             >
               <option value="PERCENTAGE_OFF">Percentage off</option>
               <option value="FIXED_RATE">Fixed nightly rate</option>
@@ -140,21 +142,16 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
               step={type === "PERCENTAGE_OFF" ? "1" : "0.01"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="admin-input mt-1 w-full"
             />
           </label>
         </div>
         <div className="mt-4 flex items-center gap-3">
-          <button type="submit" disabled={pending} className="btn-fancy px-6 py-2.5 text-sm disabled:opacity-50">
+          <button type="submit" disabled={pending} className="admin-btn admin-btn-primary">
             {pending ? "Saving…" : editingId ? "Save changes" : "Create deal"}
           </button>
           {editingId && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={resetForm}
-              className="rounded-lg border border-ink/15 px-4 py-2.5 text-sm font-medium text-ink/70 hover:bg-ink/5 disabled:opacity-50"
-            >
+            <button type="button" disabled={pending} onClick={resetForm} className="admin-btn admin-btn-outline">
               Cancel
             </button>
           )}
@@ -164,18 +161,19 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
         <p className="mt-3 text-xs text-ink/40">
           If deals overlap the same night, the earliest-created deal wins — avoid overlapping date ranges.
         </p>
-      </form>
+        </form>
+      </Card>
 
       <div>
         <h2 className="font-display text-lg font-semibold">All deals</h2>
         {deals.length === 0 ? (
           <p className="mt-3 text-sm text-ink/50">No deals yet.</p>
         ) : (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm">
+          <Card className="mt-3 overflow-hidden p-0">
             {deals.map((d) => {
               const expired = d.endDate <= now;
               return (
-                <div key={d.id} className="flex items-center justify-between gap-4 border-b border-ink/5 px-5 py-4 last:border-0">
+                <div key={d.id} className="flex flex-wrap items-center justify-between gap-4 border-b border-ink/5 px-5 py-4 last:border-0">
                   <div>
                     <p className="font-medium">{d.name}</p>
                     <p className="text-sm text-ink/50">
@@ -184,31 +182,28 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                        d.active ? "bg-emerald-50 text-emerald-700" : "bg-ink/5 text-ink/50"
-                      }`}
-                    >
-                      {d.active ? "● Live now" : "○ Turned off"}
+                    <span className={`admin-badge border ${d.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-ink/10 bg-ink/5 text-ink/50"}`}>
+                      <span className={`admin-badge-dot ${d.active ? "bg-emerald-500" : "bg-ink/30"}`} aria-hidden />
+                      {d.active ? "Live now" : "Turned off"}
                     </span>
                     <button
                       disabled={pending}
                       onClick={() => onEdit(d)}
-                      className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-ink/5 disabled:opacity-50"
+                      className="admin-btn admin-btn-outline admin-btn-sm"
                     >
                       Edit
                     </button>
                     <button
                       disabled={pending}
                       onClick={() => onToggle(d.id, !d.active)}
-                      className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-ink/5 disabled:opacity-50"
+                      className="admin-btn admin-btn-outline admin-btn-sm"
                     >
                       {d.active ? "Turn off" : "Turn on"}
                     </button>
                     <button
                       disabled={pending}
                       onClick={() => onDelete(d.id)}
-                      className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="admin-btn admin-btn-danger-outline admin-btn-sm"
                     >
                       Delete
                     </button>
@@ -216,7 +211,7 @@ export default function DealsClient({ deals }: { deals: DealRow[] }) {
                 </div>
               );
             })}
-          </div>
+          </Card>
         )}
       </div>
     </div>
