@@ -60,9 +60,25 @@ model Booking {
   updatedAt             DateTime      @updatedAt
   damageClaims          DamageClaim[]
   emails                EmailLog[]
+  messages              Message[]
 
   @@index([checkIn, checkOut])
   @@index([status])
+}
+
+// Two-way guest/host message thread, distinct from EmailLog (which only
+// tracks single transactional sends). Populated by admin compose (OUT) and
+// the Resend inbound webhook (IN) — see app/api/webhooks/resend-inbound.
+model Message {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  // IN (from guest) | OUT (from host)
+  direction String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
 }
 
 // External bookings/blocks imported from the Sympl iCal feed

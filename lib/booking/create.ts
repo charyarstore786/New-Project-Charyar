@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { getVerificationStatus, getVerificationSummary } from "@/lib/stripe/identity";
 import { getPaymentProvider } from "@/lib/stripe/payments";
-import { getEmailProvider } from "@/lib/email/send";
+import { getEmailProvider, guestReplyTo } from "@/lib/email/send";
 import { getGeocodingProvider, milesFromProperty, APPROVAL_RADIUS_MILES } from "@/lib/geo";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
 import { bookingReceivedEmailSubject, bookingReceivedEmailText } from "@/lib/email/templates/bookingReceived";
@@ -232,7 +232,7 @@ export async function createBooking(input: {
         ? confirmationEmailText({ firstName, checkInDate, checkOutDate })
         : bookingReceivedEmailText({ firstName, reference: booking.reference, checkInDate, checkOutDate, approved: true });
       try {
-        await getEmailProvider().send({ to: input.guest.email, subject, text: body });
+        await getEmailProvider().send({ to: input.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
         await db.emailLog.create({
           data: { bookingId: booking.id, type: sendFullDetailsNow ? "CONFIRMATION" : "BOOKING_CONFIRMED_SHORT", to: input.guest.email, subject, body },
         });
@@ -258,7 +258,7 @@ export async function createBooking(input: {
       const subject = bookingReceivedEmailSubject({ approved: false });
       const body = bookingReceivedEmailText({ firstName, reference: booking.reference, checkInDate, checkOutDate, approved: false });
       try {
-        await getEmailProvider().send({ to: input.guest.email, subject, text: body });
+        await getEmailProvider().send({ to: input.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
         await db.emailLog.create({ data: { bookingId: booking.id, type: "BOOKING_RECEIVED", to: input.guest.email, subject, body } });
       } catch (err) {
         console.error("Guest booking-received email failed:", err);

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { getPricing } from "@/lib/pricing";
 import { getDepositProvider } from "@/lib/stripe/deposit";
 import { getPaymentProvider } from "@/lib/stripe/payments";
-import { getEmailProvider } from "@/lib/email/send";
+import { getEmailProvider, guestReplyTo } from "@/lib/email/send";
 import { deriveDepositStatus } from "@/lib/booking/depositStatus";
 import { checkInInstructionsSubject, checkInInstructionsText } from "@/lib/email/templates/checkInInstructions";
 import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/email/templates/checkOutInstructions";
@@ -73,7 +73,7 @@ async function attemptDepositHold(
   const subject = depositDeclinedEmailSubject();
   const body = depositDeclinedEmailText({ firstName, deposit: depositAmount });
   try {
-    await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+    await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
     await db.emailLog.upsert({
       where: { bookingId_type: { bookingId: booking.id, type: "DEPOSIT_DECLINED" } },
       create: { bookingId: booking.id, type: "DEPOSIT_DECLINED", to: booking.guest.email, subject, body },
@@ -241,7 +241,7 @@ export async function sendCheckInInstructions(): Promise<TaskSummary> {
       const subject = checkInInstructionsSubject();
       const body = checkInInstructionsText({ firstName, checkInDate: formatDisplayDate(booking.checkIn), deposit });
 
-      await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+      await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
       await db.emailLog.create({ data: { bookingId: booking.id, type: "CHECK_IN_INSTRUCTIONS", to: booking.guest.email, subject, body } });
       summary.processed++;
     } catch (err) {
@@ -281,7 +281,7 @@ export async function sendCheckOutInstructions(): Promise<TaskSummary> {
       const subject = checkOutInstructionsSubject();
       const body = checkOutInstructionsText({ firstName, deposit });
 
-      await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+      await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
       await db.emailLog.create({ data: { bookingId: booking.id, type: "CHECK_OUT_INSTRUCTIONS", to: booking.guest.email, subject, body } });
       summary.processed++;
     } catch (err) {
@@ -317,7 +317,7 @@ export async function autoCancelStalePending(): Promise<TaskSummary> {
         checkInDate: formatDisplayDate(booking.checkIn),
         checkOutDate: formatDisplayDate(booking.checkOut),
       });
-      await getEmailProvider().send({ to: booking.guest.email, subject, text: body });
+      await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
       await db.emailLog.upsert({
         where: { bookingId_type: { bookingId: booking.id, type: "REJECTED" } },
         create: { bookingId: booking.id, type: "REJECTED", to: booking.guest.email, subject, body },

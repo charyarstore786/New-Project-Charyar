@@ -10,6 +10,7 @@ import Row from "@/components/admin/Row";
 import { IconChevronLeft } from "@/components/admin/icons";
 import ActionButtons from "./ActionButtons";
 import CardSection from "./CardSection";
+import MessagesThread from "./MessagesThread";
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,6 +21,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       guest: true,
       damageClaims: { orderBy: { createdAt: "desc" } },
       emails: { orderBy: { sentAt: "desc" } },
+      messages: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!booking) notFound();
@@ -144,6 +146,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             </div>
           )}
         </Card>
+
+        <MessagesThread
+          bookingId={booking.id}
+          messages={booking.messages.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }))}
+        />
 
         <Card as="section" className="p-5 lg:col-span-2">
           <h2 className="font-display text-lg font-semibold">Activity log</h2>

@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { chargeSavedCard, getPaymentProvider } from "@/lib/stripe/payments";
 import { getDepositProvider } from "@/lib/stripe/deposit";
-import { getEmailProvider } from "@/lib/email/send";
+import { getEmailProvider, guestReplyTo } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
 import { bookingReceivedEmailSubject, bookingReceivedEmailText } from "@/lib/email/templates/bookingReceived";
 import { getPricing } from "@/lib/pricing";
 import { FULL_DETAILS_WITHIN_DAYS, daysUntil } from "@/lib/booking/create";
+import { site } from "@/lib/site";
 
 function formatDisplayDate(iso: Date): string {
   return iso.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -29,7 +30,12 @@ async function logEvent(bookingId: string, type: string, detail?: string) {
  */
 async function sendEmailSafely(input: { bookingId: string; to: string; type: string; subject: string; body: string }) {
   try {
-    await getEmailProvider().send({ to: input.to, subject: input.subject, text: input.body });
+    await getEmailProvider().send({
+      to: input.to,
+      subject: input.subject,
+      text: input.body,
+      replyTo: guestReplyTo(input.bookingId),
+    });
     await db.emailLog.upsert({
       where: { bookingId_type: { bookingId: input.bookingId, type: input.type } },
       create: { bookingId: input.bookingId, type: input.type, to: input.to, subject: input.subject, body: input.body },
@@ -352,6 +358,7 @@ export async function deleteBooking(bookingId: string): Promise<{ ok: true } | {
     db.eventLog.deleteMany({ where: { bookingId } }),
     db.emailLog.deleteMany({ where: { bookingId } }),
     db.damageClaim.deleteMany({ where: { bookingId } }),
+    db.message.deleteMany({ where: { bookingId } }),
     db.booking.delete({ where: { id: bookingId } }),
   ]);
 
@@ -368,4 +375,27 @@ export async function updateBookingStatus(bookingId: string, status: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
   revalidatePath("/admin");
+}
+
+/** Host sends a free-text message to the guest — see MessagesThread.tsx. The guest's reply (if any) arrives via the Resend inbound webhook as an IN message. */
+export async function sendGuestMessage(bookingId: string, body: string) {
+  const trimmed = body.trim();
+  if (!trimmed) return;
+
+  const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { guest: true } });
+
+  await db.message.create({ data: { bookingId, direction: "OUT", body: trimmed } });
+
+  try {
+    await getEmailProvider().send({
+      to: booking.guest.email,
+      subject: `Message from your host — ${booking.reference}, ${site.name}`,
+      text: `${trimmed}\n\n— ${site.name}\n\nReply to this email to message us back.`,
+      replyTo: guestReplyTo(bookingId),
+    });
+  } catch (err) {
+    await logEvent(bookingId, "EMAIL_SEND_FAILED", `GUEST_MESSAGE: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
 }
