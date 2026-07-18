@@ -14,11 +14,13 @@ import { checkInInstructionsSubject, checkInInstructionsText } from "@/lib/email
 import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/email/templates/checkOutInstructions";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
+import { reviewRequestEmailSubject, reviewRequestEmailText } from "@/lib/email/templates/reviewRequest";
 import { FULL_DETAILS_WITHIN_DAYS } from "@/lib/booking/create";
 
 const AUTO_RELEASE_AFTER_CHECKOUT_HOURS = 24;
 const AUTO_CANCEL_AFTER_PENDING_DAYS = 6;
 const GDPR_PURGE_AFTER_CHECKOUT_DAYS = 30;
+const REVIEW_REQUEST_AFTER_CHECKOUT_DAYS = 2;
 
 function startOfUtcDay(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -283,6 +285,44 @@ export async function sendCheckOutInstructions(): Promise<TaskSummary> {
 
       await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
       await db.emailLog.create({ data: { bookingId: booking.id, type: "CHECK_OUT_INSTRUCTIONS", to: booking.guest.email, subject, body } });
+      summary.processed++;
+    } catch (err) {
+      summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return summary;
+}
+
+/**
+ * Asks guests for a Google review a couple of days after checkout — enough
+ * time to settle back in, while the stay is still fresh. Only for bookings
+ * that actually reached checkout (never sent to cancelled/rejected ones).
+ */
+export async function sendReviewRequests(): Promise<TaskSummary> {
+  const target = addDays(startOfUtcDay(new Date()), -REVIEW_REQUEST_AFTER_CHECKOUT_DAYS);
+  const dayAfter = addDays(target, 1);
+  const summary: TaskSummary = { processed: 0, errors: [] };
+
+  const candidates = await db.booking.findMany({
+    where: {
+      status: { in: ["APPROVED", "CHECKED_IN", "CHECKED_OUT", "CLOSED"] },
+      checkOut: { gte: target, lt: dayAfter },
+      emails: { none: { type: "REVIEW_REQUEST" } },
+    },
+    include: { guest: true },
+  });
+
+  if (candidates.length === 0) return summary;
+
+  for (const booking of candidates) {
+    try {
+      const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+      const subject = reviewRequestEmailSubject();
+      const body = reviewRequestEmailText({ firstName });
+
+      await getEmailProvider().send({ to: booking.guest.email, subject, text: body, replyTo: guestReplyTo(booking.id) });
+      await db.emailLog.create({ data: { bookingId: booking.id, type: "REVIEW_REQUEST", to: booking.guest.email, subject, body } });
       summary.processed++;
     } catch (err) {
       summary.errors.push(`${booking.reference}: ${err instanceof Error ? err.message : String(err)}`);

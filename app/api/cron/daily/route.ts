@@ -8,6 +8,7 @@ import {
   retryDeclinedDeposits,
   sendCheckInInstructions,
   sendCheckOutInstructions,
+  sendReviewRequests,
 } from "@/lib/cron/dailyTasks";
 
 /**
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
     depositAutoRelease: await autoReleaseDeposits(),
     checkInEmails: await sendCheckInInstructions(),
     checkOutEmails: await sendCheckOutInstructions(),
+    reviewRequests: await sendReviewRequests(),
     autoCancelled: await autoCancelStalePending(),
     gdprPurge: await purgeOldGuestIdData(),
   };
