@@ -253,12 +253,40 @@ const TERMINAL_STATUSES = ["CANCELLED", "REJECTED", "CLOSED"];
  * charged); if the stay total was already captured, that's a real charge
  * the host needs to refund manually via Stripe — this doesn't attempt that.
  */
+/** Free-cancellation window per the published policy (see /terms). */
+const FREE_CANCELLATION_HOURS = 24;
+
 export async function cancelBooking(bookingId: string, reason?: string) {
   const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
   if (TERMINAL_STATUSES.includes(booking.status)) return;
 
-  if (booking.stripePaymentIntentId && booking.status === "PENDING_APPROVAL") {
-    await getPaymentProvider().releaseStayPayment(booking.stripePaymentIntentId);
+  if (booking.stripePaymentIntentId) {
+    if (booking.status === "PENDING_APPROVAL") {
+      // Never captured — void the authorization, guest was never charged.
+      await getPaymentProvider().releaseStayPayment(booking.stripePaymentIntentId);
+    } else {
+      // Already captured. Honor the published policy: full refund if
+      // cancelled 24h+ before check-in, otherwise non-refundable.
+      const hoursUntilCheckIn = (booking.checkIn.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursUntilCheckIn >= FREE_CANCELLATION_HOURS) {
+        try {
+          await getPaymentProvider().refundStayPayment(booking.stripePaymentIntentId);
+          await logEvent(
+            bookingId,
+            "STAY_PAYMENT_REFUNDED",
+            `£${(booking.total / 100).toFixed(2)} refunded — cancelled ${Math.floor(hoursUntilCheckIn)}h before check-in (free cancellation policy).`,
+          );
+        } catch (err) {
+          await logEvent(bookingId, "STAY_REFUND_FAILED", err instanceof Error ? err.message : String(err));
+        }
+      } else {
+        await logEvent(
+          bookingId,
+          "STAY_PAYMENT_NOT_REFUNDED",
+          "Cancelled within 24 hours of check-in — non-refundable per policy.",
+        );
+      }
+    }
   }
   if (booking.stripeDepositIntentId) {
     try {

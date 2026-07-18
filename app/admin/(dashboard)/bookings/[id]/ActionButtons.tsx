@@ -37,19 +37,26 @@ const NEXT_STATUS: Record<string, { value: string; label: string }[]> = {
 const TERMINAL_STATUSES = ["CANCELLED", "REJECTED", "CLOSED"];
 const PRE_APPROVAL_STATUSES = ["PENDING_VERIFICATION", "PENDING_APPROVAL"];
 
+const FREE_CANCELLATION_HOURS = 24;
+
 export default function ActionButtons({
   bookingId,
   reference,
   status,
+  checkIn,
   depositStatus,
   depositAmount,
 }: {
   bookingId: string;
   reference: string;
   status: string;
+  /** ISO date string — used to show whether cancelling now would refund the stay total. */
+  checkIn: string;
   depositStatus: DepositStatus;
   depositAmount: number;
 }) {
+  const hoursUntilCheckIn = (new Date(checkIn).getTime() - Date.now()) / (1000 * 60 * 60);
+  const cancelWouldRefund = !PRE_APPROVAL_STATUSES.includes(status) && hoursUntilCheckIn >= FREE_CANCELLATION_HOURS;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -360,9 +367,11 @@ export default function ActionButtons({
       {showCancelForm && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-900">
-            Marks the booking cancelled and releases any uncaptured authorization or deposit hold. If the stay total
-            was already captured, that's a real charge you'll need to refund manually via Stripe — this doesn't do
-            that automatically.
+            Marks the booking cancelled and releases any uncaptured authorization or deposit hold.{" "}
+            {status !== "PENDING_APPROVAL" &&
+              (cancelWouldRefund
+                ? "The stay total was already captured — it's more than 24 hours before check-in, so it will be refunded automatically per policy."
+                : "The stay total was already captured and check-in is within 24 hours, so per policy it will NOT be refunded automatically.")}
           </p>
           <label className="mt-3 block text-sm font-medium text-red-900">
             Reason (optional, kept as an internal note)

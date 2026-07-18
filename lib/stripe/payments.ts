@@ -23,6 +23,8 @@ export interface PaymentProvider {
   captureStayPayment(paymentIntentId: string): Promise<void>;
   /** Host rejected — release the authorization, guest is never charged. */
   releaseStayPayment(paymentIntentId: string): Promise<void>;
+  /** Cancelled after capture, within the free-cancellation window — refund the stay total. */
+  refundStayPayment(paymentIntentId: string): Promise<void>;
 }
 
 class MockPayments implements PaymentProvider {
@@ -33,6 +35,10 @@ class MockPayments implements PaymentProvider {
   }
 
   async releaseStayPayment(): Promise<void> {
+    // Mock: nothing to call out to.
+  }
+
+  async refundStayPayment(): Promise<void> {
     // Mock: nothing to call out to.
   }
 }
@@ -46,6 +52,10 @@ class StripePayments implements PaymentProvider {
 
   async releaseStayPayment(paymentIntentId: string): Promise<void> {
     await getStripe().paymentIntents.cancel(paymentIntentId);
+  }
+
+  async refundStayPayment(paymentIntentId: string): Promise<void> {
+    await getStripe().refunds.create({ payment_intent: paymentIntentId });
   }
 }
 

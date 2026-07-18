@@ -61,6 +61,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           bookingId={booking.id}
           reference={booking.reference}
           status={booking.status}
+          checkIn={booking.checkIn.toISOString()}
           depositStatus={depositStatus}
           depositAmount={depositAmount}
         />
