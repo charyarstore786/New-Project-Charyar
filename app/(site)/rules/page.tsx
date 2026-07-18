@@ -47,6 +47,10 @@ function buildFaqs(deposit: number) {
       `Your card details are saved securely when you book — nothing is charged. On the day of check-in a £${deposit} hold is placed on the card, and it is released automatically after checkout once the studio is checked. You only pay if something is damaged.`,
     ],
     [
+      "What's your cancellation policy?",
+      "Free cancellation up to 24 hours before check-in, with a full refund of the stay total. Cancellations within 24 hours of check-in, or no-shows, aren't refundable. The damage deposit is separate and is never affected by cancellation timing.",
+    ],
+    [
       "Why do you need my ID?",
       "A quick photo ID check (passport, driving licence or national ID) keeps the studio safe and secure for every guest. It takes about a minute on your phone and your documents are handled by our secure verification provider — we never store them ourselves.",
     ],

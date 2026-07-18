@@ -80,11 +80,25 @@ export default async function TermsPage() {
           <h2 className="font-display text-2xl font-semibold text-ink">
             Cancellations
           </h2>
-          <p className="mt-3">
-            Cancellation terms are confirmed at the time of booking. If the
-            host must cancel for reasons beyond their control, all payments and
-            holds are refunded in full.
-          </p>
+          <ul className="mt-3 list-disc space-y-2 pl-5">
+            <li>
+              Free cancellation up to 24 hours before check-in — the full
+              stay total is refunded.
+            </li>
+            <li>
+              Cancellations made within 24 hours of check-in, and no-shows,
+              are non-refundable.
+            </li>
+            <li>
+              The damage deposit is never affected by cancellation timing —
+              it is only ever charged in the case of genuine damage to the
+              property.
+            </li>
+            <li>
+              If the host must cancel for reasons beyond their control, all
+              payments and holds are refunded in full.
+            </li>
+          </ul>
         </section>
 
         <section>

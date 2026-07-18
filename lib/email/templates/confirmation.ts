@@ -73,6 +73,11 @@ Damage Deposit Policy
 - A damage deposit may be required prior to arrival. For last-minute bookings, this may be requested via bank transfer.
 - Deposits are refunded within 24 hours of departure, pending inspection.
 
+Cancellation Policy
+- Free cancellation up to 24 hours before check-in, with a full refund of the stay total.
+- Cancellations within 24 hours of check-in, or no-shows, are non-refundable.
+- The damage deposit above is separate and is never affected by cancellation timing.
+
 Safety & Compliance
 - Do not tamper with smoke detectors or safety equipment.
 - Always lock doors and windows when leaving the property.

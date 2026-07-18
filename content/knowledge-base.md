@@ -52,6 +52,15 @@ shared with anyone.
 - Released automatically after checkout, provided the studio is left as
   found; only charged (in part or full) if there's genuine damage.
 
+## Cancellation policy
+
+- Free cancellation up to 24 hours before check-in — full refund of the
+  stay total.
+- Cancellations within 24 hours of check-in, and no-shows, are
+  non-refundable.
+- The damage deposit is separate and never affected by cancellation timing
+  — it's only ever charged for genuine damage after a stay.
+
 ## Check-in / check-out
 
 - Check-in: after 4:00 PM. Check-out: by 10:00 AM.
