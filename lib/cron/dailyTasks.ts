@@ -14,6 +14,7 @@ import { checkInInstructionsSubject, checkInInstructionsText } from "@/lib/email
 import { checkOutInstructionsSubject, checkOutInstructionsText } from "@/lib/email/templates/checkOutInstructions";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
+import { FULL_DETAILS_WITHIN_DAYS } from "@/lib/booking/create";
 
 const AUTO_RELEASE_AFTER_CHECKOUT_HOURS = 24;
 const AUTO_CANCEL_AFTER_PENDING_DAYS = 6;
@@ -207,17 +208,26 @@ export async function autoReleaseDeposits(): Promise<TaskSummary> {
   return summary;
 }
 
-/** Sends check-in instructions the day before arrival. */
+/**
+ * Sends full check-in details (address, entry code) once a booking is
+ * within FULL_DETAILS_WITHIN_DAYS of arrival, for any approved booking that
+ * hasn't received them yet — either because it was approved further out
+ * (see lib/booking/create.ts and the admin approveBooking action, which
+ * defer full details the same way) or because a previous run of this cron
+ * was missed. The emails:none guard covers both CHECK_IN_INSTRUCTIONS
+ * (this email) and CONFIRMATION (the immediate version for near-term
+ * bookings), so nobody gets full details twice.
+ */
 export async function sendCheckInInstructions(): Promise<TaskSummary> {
-  const tomorrow = addDays(startOfUtcDay(new Date()), 1);
-  const dayAfter = addDays(tomorrow, 1);
+  const today = startOfUtcDay(new Date());
+  const cutoff = addDays(today, FULL_DETAILS_WITHIN_DAYS + 1);
   const summary: TaskSummary = { processed: 0, errors: [] };
 
   const candidates = await db.booking.findMany({
     where: {
       status: { in: ["APPROVED", "CHECKED_IN"] },
-      checkIn: { gte: tomorrow, lt: dayAfter },
-      emails: { none: { type: "CHECK_IN_INSTRUCTIONS" } },
+      checkIn: { gte: today, lt: cutoff },
+      emails: { none: { type: { in: ["CHECK_IN_INSTRUCTIONS", "CONFIRMATION"] } } },
     },
     include: { guest: true },
   });
@@ -242,7 +252,12 @@ export async function sendCheckInInstructions(): Promise<TaskSummary> {
   return summary;
 }
 
-/** Sends check-out instructions on checkout morning. */
+/**
+ * Sends check-out instructions on checkout day. Timing relative to the
+ * 10:00 AM checkout time is controlled by the cron's own schedule (see
+ * vercel.json — runs at 05:00 UTC, ~5 hours ahead of local checkout),
+ * since there's only one daily cron run and every checkout time is the same.
+ */
 export async function sendCheckOutInstructions(): Promise<TaskSummary> {
   const today = startOfUtcDay(new Date());
   const tomorrow = addDays(today, 1);

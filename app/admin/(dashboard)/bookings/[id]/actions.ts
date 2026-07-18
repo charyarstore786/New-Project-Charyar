@@ -8,7 +8,9 @@ import { getEmailProvider } from "@/lib/email/send";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
 import { rejectionEmailSubject, rejectionEmailText } from "@/lib/email/templates/rejection";
 import { depositDeclinedEmailSubject, depositDeclinedEmailText } from "@/lib/email/templates/depositDeclined";
+import { bookingReceivedEmailSubject, bookingReceivedEmailText } from "@/lib/email/templates/bookingReceived";
 import { getPricing } from "@/lib/pricing";
+import { FULL_DETAILS_WITHIN_DAYS, daysUntil } from "@/lib/booking/create";
 
 function formatDisplayDate(iso: Date): string {
   return iso.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -49,7 +51,14 @@ export async function approveBooking(bookingId: string) {
   await db.booking.update({ where: { id: bookingId }, data: { status: "APPROVED" } });
   await logEvent(bookingId, "BOOKING_APPROVED", "Payment captured, guest to receive confirmation email.");
 
-  await sendConfirmationEmail(bookingId);
+  // Full check-in details (address, entry code) only go out within
+  // FULL_DETAILS_WITHIN_DAYS of arrival — further out, a short "you're
+  // confirmed" note goes now and the cron job sends full details later.
+  if (daysUntil(booking.checkIn) <= FULL_DETAILS_WITHIN_DAYS) {
+    await sendConfirmationEmail(bookingId);
+  } else {
+    await sendBookingConfirmedShortEmail(bookingId);
+  }
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
@@ -104,6 +113,31 @@ export async function sendConfirmationEmail(bookingId: string) {
       firstName,
       checkInDate: formatDisplayDate(booking.checkIn),
       checkOutDate: formatDisplayDate(booking.checkOut),
+    }),
+  });
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+/** Short "you're confirmed" note for approvals where full check-in details are deliberately deferred (see approveBooking). */
+async function sendBookingConfirmedShortEmail(bookingId: string) {
+  const booking = await db.booking.findUniqueOrThrow({
+    where: { id: bookingId },
+    include: { guest: true },
+  });
+
+  const firstName = booking.guest.name.split(" ")[0] || booking.guest.name;
+  await sendEmailSafely({
+    bookingId,
+    to: booking.guest.email,
+    type: "BOOKING_CONFIRMED_SHORT",
+    subject: bookingReceivedEmailSubject({ approved: true }),
+    body: bookingReceivedEmailText({
+      firstName,
+      reference: booking.reference,
+      checkInDate: formatDisplayDate(booking.checkIn),
+      checkOutDate: formatDisplayDate(booking.checkOut),
+      approved: true,
     }),
   });
 

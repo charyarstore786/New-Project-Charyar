@@ -5,6 +5,7 @@ import { getPaymentProvider } from "@/lib/stripe/payments";
 import { getEmailProvider } from "@/lib/email/send";
 import { getGeocodingProvider, milesFromProperty, APPROVAL_RADIUS_MILES } from "@/lib/geo";
 import { confirmationEmailSubject, confirmationEmailText } from "@/lib/email/templates/confirmation";
+import { bookingReceivedEmailSubject, bookingReceivedEmailText } from "@/lib/email/templates/bookingReceived";
 import { hostBookingNeedsApprovalSubject, hostBookingNeedsApprovalText } from "@/lib/email/templates/hostBookingNeedsApproval";
 import { hostBookingAutoApprovedSubject, hostBookingAutoApprovedText } from "@/lib/email/templates/hostBookingAutoApproved";
 import { formatGbp } from "./format";
@@ -23,6 +24,19 @@ export type GuestDetails = {
 
 function formatDisplayDate(iso: Date): string {
   return iso.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/**
+ * Full check-in details (address, entry code) are only ever emailed within
+ * this many days of arrival — same-day/near bookings get them immediately,
+ * further-out bookings get a short "you're confirmed" note now and the
+ * full details later, closer to arrival (see lib/cron/dailyTasks.ts).
+ */
+export const FULL_DETAILS_WITHIN_DAYS = 2;
+
+export function daysUntil(date: Date): number {
+  const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+  return Math.round((date.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 /** Never lets a notification-email failure break booking creation — logged, not thrown. */
@@ -210,11 +224,18 @@ export async function createBooking(input: {
       }
 
       const firstName = input.guest.name.split(" ")[0] || input.guest.name;
-      const subject = confirmationEmailSubject();
-      const body = confirmationEmailText({ firstName, checkInDate, checkOutDate });
+      const sendFullDetailsNow = daysUntil(stay.checkIn) <= FULL_DETAILS_WITHIN_DAYS;
+      const subject = sendFullDetailsNow
+        ? confirmationEmailSubject()
+        : bookingReceivedEmailSubject({ approved: true });
+      const body = sendFullDetailsNow
+        ? confirmationEmailText({ firstName, checkInDate, checkOutDate })
+        : bookingReceivedEmailText({ firstName, reference: booking.reference, checkInDate, checkOutDate, approved: true });
       try {
         await getEmailProvider().send({ to: input.guest.email, subject, text: body });
-        await db.emailLog.create({ data: { bookingId: booking.id, type: "CONFIRMATION", to: input.guest.email, subject, body } });
+        await db.emailLog.create({
+          data: { bookingId: booking.id, type: sendFullDetailsNow ? "CONFIRMATION" : "BOOKING_CONFIRMED_SHORT", to: input.guest.email, subject, body },
+        });
       } catch (err) {
         console.error("Guest confirmation email failed:", err);
       }
@@ -233,6 +254,16 @@ export async function createBooking(input: {
         }),
       );
     } else {
+      const firstName = input.guest.name.split(" ")[0] || input.guest.name;
+      const subject = bookingReceivedEmailSubject({ approved: false });
+      const body = bookingReceivedEmailText({ firstName, reference: booking.reference, checkInDate, checkOutDate, approved: false });
+      try {
+        await getEmailProvider().send({ to: input.guest.email, subject, text: body });
+        await db.emailLog.create({ data: { bookingId: booking.id, type: "BOOKING_RECEIVED", to: input.guest.email, subject, body } });
+      } catch (err) {
+        console.error("Guest booking-received email failed:", err);
+      }
+
       await notifyHostSafely(
         hostBookingNeedsApprovalSubject({ reference: booking.reference }),
         hostBookingNeedsApprovalText({
