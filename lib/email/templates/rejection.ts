@@ -22,7 +22,7 @@ Unfortunately we're unable to accept this booking request. Your card was never c
 
 We're sorry for the inconvenience, and we'd be glad to help with a future stay if your plans change.
 
-Any questions, just reply to this email or message us on WhatsApp.
+Any questions, just reply to this email or WhatsApp/call us on ${site.phone}.
 
 ${site.name}`;
 }

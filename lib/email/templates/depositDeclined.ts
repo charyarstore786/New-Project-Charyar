@@ -19,7 +19,7 @@ We tried to place the £${input.deposit} refundable damage deposit hold on your 
 
 This is a hold only, never a charge unless there's damage — but we do need a card that can support it before or during your stay.
 
-Please reply to this email or message us on WhatsApp with a working card, and we'll try again.
+Please reply to this email or WhatsApp/call us on ${site.phone} with a working card, and we'll try again.
 
 ${site.name}
 ${site.email}`;

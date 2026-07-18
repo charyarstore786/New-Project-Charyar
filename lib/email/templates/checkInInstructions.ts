@@ -36,7 +36,7 @@ Parking: Free street parking is available. Please avoid parking on double yellow
 
 A £${input.deposit} damage deposit hold will be placed on your saved card around your arrival — this is a hold, not a charge, and is released automatically after checkout provided the studio is left as found.
 
-Any questions before you arrive, just reply to this email or message us on WhatsApp.
+Any questions before or during your stay, just reply to this email or WhatsApp/call us on ${site.phone}.
 
 Safe travels!
 ${site.name}`;

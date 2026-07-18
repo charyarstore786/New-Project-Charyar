@@ -25,6 +25,8 @@ Check-out is by ${site.checkOut} today. A quick reminder before you go:
 - Lock the door and return the key to the key box.
 - Your £${input.deposit} damage deposit hold will be released automatically within a few days, once the studio has been checked.
 
+Left something behind, or have a question about your deposit? Just reply to this email or WhatsApp/call us on ${site.phone}.
+
 Safe travels, and we'd love to host you again.
 ${site.name}`;
 }
