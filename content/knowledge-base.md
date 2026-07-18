@@ -31,8 +31,9 @@ shared with anyone.
 - Free street parking nearby, first-come first-served. Guests must not park
   on double yellow lines or block driveways — parking is the guest's own
   responsibility, the host is not liable for tickets, damage or theft.
-- The exact address and entry instructions are only ever sent by email,
-  after a booking is approved.
+- The exact address and entry instructions are only ever sent by email —
+  immediately if check-in is within 2 days, otherwise a short confirmation
+  goes first and full details follow within 2 days of arrival.
 
 ## Pricing & booking
 
@@ -66,8 +67,10 @@ shared with anyone.
 - Check-in: after 4:00 PM. Check-out: by 10:00 AM.
 - Early check-in / late check-out may be available for a fee, subject to
   availability.
-- Full check-in instructions (address, entry, key box code) are emailed the
-  day before arrival, and check-out reminders on the morning of departure.
+- Full check-in instructions (address, entry, key box code) are emailed
+  once you're within 2 days of arrival — right away if you book that close
+  to check-in, otherwise a short confirmation email goes first. A check-out
+  reminder is emailed the morning of departure.
 
 ## House rules
 
@@ -84,8 +87,9 @@ shared with anyone.
 
 ## Contact
 
-- Questions can be answered here, by replying to booking emails, or via the
-  WhatsApp button on the site.
+- Questions can be answered here, by replying to booking emails, or via
+  WhatsApp (number given in the live policy values above) — the host
+  prefers WhatsApp chat over phone calls.
 - If something isn't covered here or in a guest's specific booking, say so
   honestly and offer to pass the question to the host — never guess or
   make a promise on the host's behalf.

@@ -9,7 +9,7 @@ export type FaqEntry = { keywords: string[]; answer: string | ((pricing: Pricing
 export const FAQ_ENTRIES: FaqEntry[] = [
   {
     keywords: ["check in", "check-in", "checkin", "arrival", "arrive"],
-    answer: `Check-in is from ${site.checkIn}. Early check-in may be available for a fee, subject to availability — just ask. Full instructions are emailed the day before you arrive.`,
+    answer: `Check-in is from ${site.checkIn}. Early check-in may be available for a fee, subject to availability — just ask. Full instructions are emailed once you're within 2 days of arrival.`,
   },
   {
     keywords: ["check out", "check-out", "checkout", "depart", "leaving"],
@@ -46,7 +46,15 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   },
   {
     keywords: ["address", "location", "where is", "entry instructions", "key"],
-    answer: "The full address is shared once your booking is confirmed, with detailed check-in and entry instructions emailed the day before you arrive.",
+    answer: "The full address and entry instructions are emailed once you're within 2 days of arrival — right away if you book that close to check-in.",
+  },
+  {
+    keywords: ["cancel", "cancellation", "cancelling", "refund"],
+    answer: "Free cancellation up to 24 hours before check-in, with a full refund of the stay total. Cancellations within 24 hours of check-in, or no-shows, aren't refundable. The damage deposit is separate and never affected by cancellation timing.",
+  },
+  {
+    keywords: ["whatsapp", "contact", "phone number", "call you", "reach you", "get in touch"],
+    answer: `Best way to reach us is WhatsApp on ${site.phone} — we prefer chat over phone calls. You can also reply to any booking email.`,
   },
   {
     keywords: ["how many guests", "max guests", "maximum guests", "sleeps"],
