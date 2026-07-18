@@ -83,7 +83,7 @@ Safety & Compliance
 - Always lock doors and windows when leaving the property.
 - Emergency contact details and safety instructions are provided inside the property.
 
-Any questions before or during your stay, just reply to this email or WhatsApp/call us on ${site.phone}.
+Any questions before or during your stay, just reply to this email or WhatsApp us on ${site.phone}.
 
 See you soon!
 ${site.name}`;
