@@ -33,6 +33,26 @@ const PHONE_RE = /^\+?[\d\s().-]{7,20}$/;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Survives a real page reload (some banks' 3DS challenge breaks out of the
+ * in-page modal and redirects the top-level page) so the booking can resume
+ * where it left off instead of stranding the guest with a blank wizard. */
+const DRAFT_KEY = "ssn-booking-draft";
+
+type Details = { name: string; email: string; phone: string; country: string; address: string };
+
+type Draft = {
+  checkIn: string | null;
+  checkOut: string | null;
+  guests: number;
+  quote: Quote | null;
+  details: Details;
+  verified: boolean;
+  customerId: string | null;
+  verificationSessionId: string | null;
+  setupClientSecret: string | null;
+  setupIntentId: string | null;
+};
+
 export default function BookingWizard() {
   const searchParams = useSearchParams();
   const [availability, setAvailability] = useState<Availability | null>(null);
@@ -49,11 +69,12 @@ export default function BookingWizard() {
   );
   const [guests, setGuests] = useState(2);
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [details, setDetails] = useState({ name: "", email: "", phone: "", country: "", address: "" });
+  const [details, setDetails] = useState<Details>({ name: "", email: "", phone: "", country: "", address: "" });
   const [verified, setVerified] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
+  const [resuming, setResuming] = useState(false);
 
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
@@ -65,6 +86,102 @@ export default function BookingWizard() {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setAvailability)
       .catch(() => setLoadError(true));
+  }, []);
+
+  // Keep an in-progress booking recoverable across a real page reload.
+  useEffect(() => {
+    if (step === "done") {
+      sessionStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    const draft: Draft = {
+      checkIn,
+      checkOut,
+      guests,
+      quote,
+      details,
+      verified,
+      customerId,
+      verificationSessionId,
+      setupClientSecret,
+      setupIntentId,
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [step, checkIn, checkOut, guests, quote, details, verified, customerId, verificationSessionId, setupClientSecret, setupIntentId]);
+
+  // If the bank's 3DS challenge broke out of the in-page modal and did a full
+  // redirect (rather than the usual overlay), Stripe sends the guest back
+  // here with these query params. Restore the saved draft and finish the
+  // booking automatically instead of showing an empty wizard.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirectStatus = params.get("redirect_status");
+    const setupIntentClientSecret = params.get("setup_intent_client_secret");
+    if (!redirectStatus || !setupIntentClientSecret) return;
+
+    // Strip the redirect params so a manual refresh doesn't replay this.
+    window.history.replaceState({}, "", window.location.pathname);
+
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    const draft = raw ? (JSON.parse(raw) as Draft) : null;
+    if (!draft) {
+      setError(
+        "We couldn't automatically resume your booking after the bank verification. Please contact us and we'll confirm it manually."
+      );
+      return;
+    }
+
+    setCheckIn(draft.checkIn);
+    setCheckOut(draft.checkOut);
+    setGuests(draft.guests);
+    setQuote(draft.quote);
+    setDetails(draft.details);
+    setVerified(draft.verified);
+    setCustomerId(draft.customerId);
+    setVerificationSessionId(draft.verificationSessionId);
+    setSetupClientSecret(draft.setupClientSecret);
+    setSetupIntentId(draft.setupIntentId);
+    setStep("pay");
+
+    if (redirectStatus !== "succeeded") {
+      setError("Card verification wasn't completed — please try authorizing again.");
+      return;
+    }
+
+    (async () => {
+      setResuming(true);
+      setError("");
+      try {
+        const stripe = await getBrowserStripe();
+        if (!stripe) throw new Error("Payment system failed to load — please refresh and try again.");
+        const { setupIntent, error: retrieveError } = await stripe.retrieveSetupIntent(setupIntentClientSecret);
+        if (retrieveError || !setupIntent) {
+          throw new Error(retrieveError?.message || "Could not confirm your card verification.");
+        }
+        if (setupIntent.status !== "succeeded") {
+          throw new Error("Card verification wasn't completed — please try authorizing again.");
+        }
+        const paymentMethodId =
+          typeof setupIntent.payment_method === "string" ? setupIntent.payment_method : setupIntent.payment_method?.id;
+        if (!paymentMethodId) throw new Error("Could not confirm your card verification.");
+
+        await finalizeBooking(paymentMethodId, {
+          customerId: draft.customerId,
+          setupIntentId: draft.setupIntentId,
+          verificationSessionId: draft.verificationSessionId,
+          checkIn: draft.checkIn,
+          checkOut: draft.checkOut,
+          guests: draft.guests,
+          details: draft.details,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong finishing your booking.");
+      } finally {
+        setResuming(false);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const nights =
@@ -197,14 +314,33 @@ export default function BookingWizard() {
     })();
   }, [step]);
 
-  async function finalizeBooking(paymentMethodId: string) {
+  async function finalizeBooking(
+    paymentMethodId: string,
+    ctx?: {
+      customerId: string | null;
+      setupIntentId: string | null;
+      verificationSessionId: string | null;
+      checkIn: string | null;
+      checkOut: string | null;
+      guests: number;
+      details: Details;
+    }
+  ) {
+    const data = ctx ?? { customerId, setupIntentId, verificationSessionId, checkIn, checkOut, guests, details };
     setBusy(true);
     setError("");
     try {
       const piRes = await fetch("/api/stripe/payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId, paymentMethodId, checkIn, checkOut, guests, bookingReference: "pending" }),
+        body: JSON.stringify({
+          customerId: data.customerId,
+          paymentMethodId,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+          guests: data.guests,
+          bookingReference: "pending",
+        }),
       });
       const piData = await piRes.json().catch(() => ({}));
       if (!piRes.ok) throw new Error(piData.error || "Payment could not be authorized.");
@@ -222,22 +358,27 @@ export default function BookingWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          checkIn,
-          checkOut,
-          guests,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+          guests: data.guests,
           guest: {
-            name: details.name.trim(),
-            email: details.email.trim(),
-            phone: details.phone.trim(),
-            country: details.country.trim() || undefined,
-            address: details.address.trim(),
+            name: data.details.name.trim(),
+            email: data.details.email.trim(),
+            phone: data.details.phone.trim(),
+            country: data.details.country.trim() || undefined,
+            address: data.details.address.trim(),
           },
-          stripe: { customerId, setupIntentId, paymentIntentId, verificationSessionId },
+          stripe: {
+            customerId: data.customerId,
+            setupIntentId: data.setupIntentId,
+            paymentIntentId,
+            verificationSessionId: data.verificationSessionId,
+          },
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Booking failed — you have not been charged.");
-      setReference(data.reference);
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(resData.error || "Booking failed — you have not been charged.");
+      setReference(resData.reference);
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -566,7 +707,15 @@ export default function BookingWizard() {
               confirmed, the authorization is released in full.
             </p>
 
-            {stripeConfigured ? (
+            {resuming ? (
+              <div className="mt-6 rounded-xl border border-accent/30 bg-accent/5 p-5 text-sm">
+                <p className="font-medium text-accent-dark">Finishing up your booking…</p>
+                <p className="mt-1 text-ink/70">
+                  We&apos;re confirming your bank&apos;s verification — please
+                  don&apos;t close this page.
+                </p>
+              </div>
+            ) : stripeConfigured ? (
               setupClientSecret ? (
                 <div className="mt-6">
                   <StripePaymentForm

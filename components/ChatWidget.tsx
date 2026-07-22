@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { site } from "@/lib/site";
 
 type Msg = { who: "bot" | "user"; text: string };
@@ -19,6 +20,7 @@ function greeting(nightlyRate: number): Msg[] {
 }
 
 export default function ChatWidget({ nightlyRate }: { nightlyRate: number }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [teaser, setTeaser] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>(() => greeting(nightlyRate));
@@ -90,6 +92,10 @@ export default function ChatWidget({ nightlyRate }: { nightlyRate: number }) {
     setInput("");
     send(value);
   }
+
+  // Keep the floating launcher out of the way while a guest is mid-checkout —
+  // on mobile it sat right on top of the wizard's step/payment buttons.
+  if (pathname?.startsWith("/book")) return null;
 
   return (
     <>

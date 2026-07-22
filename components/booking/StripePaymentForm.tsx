@@ -38,8 +38,15 @@ function InnerForm({
       return;
     }
 
+    // Some banks' 3D Secure challenge pages break out of Stripe's in-page
+    // modal and do a real top-level redirect. Passing return_url means the
+    // bank sends the guest straight back here (with setup_intent params in
+    // the query string) instead of stranding them with no way back.
     const { error: confirmError, setupIntent } = await stripe.confirmSetup({
       elements,
+      confirmParams: {
+        return_url: `${window.location.origin}${window.location.pathname}`,
+      },
       redirect: "if_required",
     });
 
